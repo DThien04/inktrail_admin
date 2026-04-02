@@ -2,25 +2,94 @@
 
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --surface: #ffffff;
+  --surface-muted: #faf8f6;
+  --foreground: #231a15;
+  --muted-foreground: #6f5a4d;
+  --border: #dcc8ba;
+  --accent: #8b5a2b;
+  --accent-strong: #724820;
+  --accent-soft: #f3ebe3;
+  --success-soft: #f3ebe3;
+  --success-foreground: #8b5a2b;
+  --danger-soft: #f3ebe3;
+  --danger-foreground: #8b5a2b;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #231a15;
+  --shadow: none;
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-soft: var(--accent-soft);
+  --color-success-soft: var(--success-soft);
+  --color-success-foreground: var(--success-foreground);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-foreground: var(--danger-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --font-sans: "Segoe UI", Arial, Helvetica, sans-serif;
+  --font-mono: "Courier New", monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: "Segoe UI", Arial, Helvetica, sans-serif;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  cursor: pointer;
+}
+
+::selection {
+  background: rgba(201, 123, 61, 0.18);
+}
+
+.app-shell {
+  min-height: 100vh;
+  background: var(--background);
+}
+
+.card-shadow {
+  box-shadow: none;
+}
+
+.data-card {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 12px;
+  box-shadow: none;
+}
+
+.panel-divider {
+  border-top: 3px solid var(--accent);
+}
+
+.sidebar-width-open {
+  width: 248px;
+}
+
+.sidebar-width-closed {
+  width: 88px;
 }
