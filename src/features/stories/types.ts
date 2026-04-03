@@ -57,3 +57,12 @@ export type UpdateStoryPayload = {
   status: StoryStatus;
   genreIds: string[];
 };
+
+export type CreateStoryPayload = {
+  title: string;
+  slug: string;
+  description: string;
+  coverFile: File | null;
+  status: StoryStatus;
+  genreIds: string[];
+};

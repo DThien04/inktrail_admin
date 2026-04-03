@@ -1,5 +1,6 @@
 import { apiClient } from "@/lib/api/client";
 import type {
+  CreateStoryPayload,
   GenreOption,
   StoryDetail,
   StoryGenre,
@@ -179,6 +180,25 @@ export async function updateStory(
       body,
     },
   );
+
+  return getStoryDetail(response.story.slug);
+}
+
+export async function createStory(payload: CreateStoryPayload): Promise<StoryDetail> {
+  const body = new FormData();
+  body.set("title", payload.title);
+  body.set("slug", payload.slug);
+  body.set("description", payload.description);
+  body.set("status", payload.status);
+  body.set("genre_ids", JSON.stringify(payload.genreIds));
+
+  if (payload.coverFile) {
+    body.set("cover_file", payload.coverFile);
+  }
+
+  const response = await apiClient.post<UpdateStoryResponse>("/stories", {
+    body,
+  });
 
   return getStoryDetail(response.story.slug);
 }

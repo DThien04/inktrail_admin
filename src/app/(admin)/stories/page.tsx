@@ -7,7 +7,6 @@ export default function StoriesPage() {
       <PageSectionHeader
         title="Quản lý truyện"
         description="Danh sách truyện để chỉnh sửa metadata, theo dõi trạng thái xuất bản và lượt đọc."
-        actionLabel="Thêm truyện"
       />
 
       <StoriesTable />

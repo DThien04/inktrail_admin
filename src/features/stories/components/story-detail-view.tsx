@@ -248,6 +248,12 @@ export function StoryDetailView({ slug }: { slug: string }) {
         </Link>
 
         <div className="flex flex-wrap gap-2">
+          <Link
+            href={`/chapters?storyId=${story.id}`}
+            className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground transition hover:bg-surface-muted"
+          >
+            Quản lý chương
+          </Link>
           {isEditing ? (
             <>
               <button
