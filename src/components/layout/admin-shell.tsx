@@ -94,17 +94,19 @@ export function AdminShell({
   }
 
   return (
-    <div className="app-shell min-h-screen">
-      <div className="flex min-h-screen w-full gap-4 px-4 py-4">
+    <div className="app-shell h-screen overflow-hidden">
+      <div className="flex h-full w-full gap-4 px-4 py-4">
         <AdminSidebar isOpen={isSidebarOpen} />
-        <div className="flex min-w-0 flex-1 flex-col gap-4">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4">
           <AdminTopbar
             isSidebarOpen={isSidebarOpen}
             onToggleSidebar={() => setIsSidebarOpen((current) => !current)}
             user={user}
             onLogout={handleLogout}
           />
-          <main className="min-w-0 flex-1">{children}</main>
+          <main className="min-h-0 min-w-0 flex-1 overflow-y-auto pr-1">
+            {children}
+          </main>
         </div>
       </div>
     </div>

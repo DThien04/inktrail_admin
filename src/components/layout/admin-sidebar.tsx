@@ -13,7 +13,7 @@ export function AdminSidebar({ isOpen }: AdminSidebarProps) {
 
   return (
     <aside
-      className={`hidden shrink-0 rounded-xl border border-border bg-sidebar p-3 lg:flex lg:flex-col ${
+      className={`hidden h-full shrink-0 overflow-y-auto rounded-xl border border-border bg-sidebar p-3 lg:flex lg:flex-col ${
         isOpen ? "sidebar-width-open" : "sidebar-width-closed"
       }`}
     >
