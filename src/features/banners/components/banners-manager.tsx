@@ -390,7 +390,8 @@ export function BannersManager() {
                     className="hidden"
                     disabled={isSubmitting}
                     onChange={async (event: ChangeEvent<HTMLInputElement>) => {
-                      const file = event.target.files?.[0] || null;
+                      const input = event.currentTarget;
+                      const file = input.files?.[0] || null;
                       const warning = file
                         ? await getImageWarning(file, 1400 / 800, "banner", 1400, 800)
                         : "";
@@ -400,7 +401,7 @@ export function BannersManager() {
                         bannerFile: file,
                       }));
                       setCreateWarning(warning);
-                      event.currentTarget.value = "";
+                      input.value = "";
                     }}
                   />
                   Tải ảnh banner
@@ -619,14 +620,15 @@ function BannerRow({
                   className="hidden"
                   disabled={isSaving}
                   onChange={async (event: ChangeEvent<HTMLInputElement>) => {
-                    const file = event.target.files?.[0] || null;
+                    const input = event.currentTarget;
+                    const file = input.files?.[0] || null;
                     const nextWarning = file
                       ? await getImageWarning(file, 1400 / 800, "banner", 1400, 800)
                       : "";
 
                     setBannerFile(file);
                     setWarning(nextWarning);
-                    event.currentTarget.value = "";
+                    input.value = "";
                   }}
                 />
                 Đổi ảnh banner
