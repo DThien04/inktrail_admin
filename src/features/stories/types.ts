@@ -13,6 +13,8 @@ export type StoryListItem = {
   description: string | null;
   coverUrl: string | null;
   readCount: number;
+  rating: number;
+  ratingCount: number;
   status: StoryStatus;
   updatedAt: string;
   author: {
@@ -65,4 +67,82 @@ export type CreateStoryPayload = {
   coverFile: File | null;
   status: StoryStatus;
   genreIds: string[];
+};
+
+export type MyStoryStatsSummary = {
+  totalStories: number;
+  publishedStories: number;
+  totalReads: number;
+  totalLikes: number;
+  totalComments: number;
+  totalRatings: number;
+  avgRating: number;
+};
+
+export type MyStoryStatsItem = {
+  id: string;
+  title: string;
+  slug: string;
+  status: StoryStatus;
+  updatedAt: string;
+  chapterCount: number;
+  readCount: number;
+  likeCount: number;
+  commentCount: number;
+  rating: number;
+  ratingCount: number;
+};
+
+export type MyStoryStats = {
+  summary: MyStoryStatsSummary;
+  topStories: MyStoryStatsItem[];
+};
+
+export type AuthorDashboardSummary = {
+  totalStories: number;
+  publishedStories: number;
+  draftStories: number;
+  archivedStories: number;
+  totalChapters: number;
+  totalReads: number;
+  totalLikes: number;
+  totalComments: number;
+  totalRatings: number;
+  avgRating: number;
+};
+
+export type AuthorDashboardReadPoint = {
+  date: string;
+  reads: number;
+};
+
+export type AuthorDashboardTopChapter = {
+  id: string;
+  chapterNumber: number;
+  title: string;
+  status: "draft" | "published";
+  updatedAt: string;
+  story: {
+    id: string;
+    title: string;
+    slug: string;
+  };
+  likeCount: number;
+  commentCount: number;
+  engagementScore: number;
+};
+
+export type AuthorDashboardNeedAttention = {
+  storyId: string;
+  title: string;
+  slug: string;
+  reason: string;
+};
+
+export type AuthorDashboardData = {
+  summary: AuthorDashboardSummary;
+  readTrend7d: AuthorDashboardReadPoint[];
+  topStories: MyStoryStatsItem[];
+  topChapters: AuthorDashboardTopChapter[];
+  needsAttention: AuthorDashboardNeedAttention[];
 };

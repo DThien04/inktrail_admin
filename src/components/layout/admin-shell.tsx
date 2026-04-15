@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { AdminSidebar } from "@/components/layout/admin-sidebar";
 import { AdminTopbar } from "@/components/layout/admin-topbar";
-import { hasAdminSession } from "@/features/auth/auth-guard";
+import { hasBackofficeSession } from "@/features/auth/auth-guard";
 import { getMyProfile, logout } from "@/features/auth/services/auth-service";
 import {
   clearAuthSession,
@@ -12,6 +12,10 @@ import {
   setStoredUser,
 } from "@/features/auth/storage";
 import type { AuthUser } from "@/features/auth/types";
+import {
+  getDefaultPathByRole,
+  isPathAllowedForRole,
+} from "@/lib/constants/routes";
 
 export function AdminShell({
   children,
@@ -26,7 +30,7 @@ export function AdminShell({
     let isMounted = true;
 
     async function bootstrapSession() {
-      if (!hasAdminSession()) {
+      if (!hasBackofficeSession()) {
         clearAuthSession();
         router.replace(`/login?next=${encodeURIComponent(pathname)}`);
         return;
@@ -39,13 +43,18 @@ export function AdminShell({
 
       try {
         const profile = await getMyProfile();
-        if (profile.role !== "admin") {
-          throw new Error("Tai khoan nay khong co quyen admin");
+        if (profile.role !== "admin" && profile.role !== "author") {
+          throw new Error("Tài khoản này không có quyền truy cập");
         }
 
         if (!isMounted) return;
         setStoredUser(profile);
         setUser(profile);
+
+        if (!isPathAllowedForRole(pathname, profile.role)) {
+          router.replace(getDefaultPathByRole(profile.role));
+          return;
+        }
       } catch {
         clearAuthSession();
         if (isMounted) {
@@ -86,7 +95,7 @@ export function AdminShell({
             InkTrail Admin
           </p>
           <h1 className="mt-3 text-xl font-semibold text-foreground">
-            Dang kiem tra phien dang nhap
+            Đang kiểm tra phiên đăng nhập
           </h1>
         </div>
       </div>
@@ -96,7 +105,7 @@ export function AdminShell({
   return (
     <div className="app-shell h-screen overflow-hidden">
       <div className="flex h-full w-full gap-4 px-4 py-4">
-        <AdminSidebar isOpen={isSidebarOpen} />
+        <AdminSidebar isOpen={isSidebarOpen} role={user?.role} />
         <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4">
           <AdminTopbar
             isSidebarOpen={isSidebarOpen}

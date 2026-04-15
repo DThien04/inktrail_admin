@@ -1,7 +1,9 @@
 import { apiClient } from "@/lib/api/client";
 import type {
+  AuthorDashboardData,
   CreateStoryPayload,
   GenreOption,
+  MyStoryStats,
   StoryDetail,
   StoryGenre,
   StoryListItem,
@@ -22,6 +24,8 @@ type StoryListResponse = Array<{
   description: string | null;
   cover_url: string | null;
   read_count: number;
+  rating?: number;
+  rating_count?: number;
   status: StoryStatus;
   updated_at: string;
   author: {
@@ -66,12 +70,87 @@ type UpdateStoryResponse = {
   };
 };
 
+type DeleteStoryResponse = {
+  message: string;
+};
+
 type GenreListResponse = Array<{
   id: string;
   name: string;
   slug: string;
   is_active: boolean;
 }>;
+
+type MyStoryStatsResponse = {
+  summary: {
+    total_stories: number;
+    published_stories: number;
+    total_reads: number;
+    total_likes: number;
+    total_comments: number;
+    total_ratings: number;
+    avg_rating: number;
+  };
+  top_stories: Array<{
+    id: string;
+    title: string;
+    slug: string;
+    status: StoryStatus;
+    updated_at: string;
+    chapter_count: number;
+    read_count: number;
+    like_count: number;
+    comment_count: number;
+    rating: number;
+    rating_count: number;
+  }>;
+};
+
+type AuthorDashboardResponse = {
+  summary: {
+    total_stories: number;
+    published_stories: number;
+    draft_stories: number;
+    archived_stories: number;
+    total_chapters: number;
+    total_reads: number;
+    total_likes: number;
+    total_comments: number;
+    total_ratings: number;
+    avg_rating: number;
+  };
+  read_trend_7d: Array<{ date: string; reads: number }>;
+  top_stories: Array<{
+    id: string;
+    title: string;
+    slug: string;
+    status: StoryStatus;
+    updated_at: string;
+    chapter_count: number;
+    read_count: number;
+    like_count: number;
+    comment_count: number;
+    rating: number;
+    rating_count: number;
+  }>;
+  top_chapters: Array<{
+    id: string;
+    chapter_number: number;
+    title: string;
+    status: "draft" | "published";
+    updated_at: string;
+    story: { id: string; title: string; slug: string };
+    like_count: number;
+    comment_count: number;
+    engagement_score: number;
+  }>;
+  needs_attention: Array<{
+    story_id: string;
+    title: string;
+    slug: string;
+    reason: string;
+  }>;
+};
 
 function mapGenres(genres: ApiStoryGenre[] | undefined): StoryGenre[] {
   return genres ?? [];
@@ -85,6 +164,8 @@ function mapStory(item: StoryListResponse[number]): StoryListItem {
     description: item.description,
     coverUrl: item.cover_url,
     readCount: item.read_count ?? 0,
+    rating: Number(item.rating ?? 0),
+    ratingCount: item.rating_count ?? 0,
     status: item.status,
     updatedAt: item.updated_at,
     author: item.author
@@ -139,6 +220,106 @@ export async function getAdminStories({
   const suffix = params.toString() ? `?${params.toString()}` : "";
   const response = await apiClient.get<StoryListResponse>(`/stories/admin/list${suffix}`);
   return response.map(mapStory);
+}
+
+export async function getMyStories({
+  status,
+}: {
+  status?: StoryStatus | "all";
+}) {
+  const params = new URLSearchParams();
+  if (status && status !== "all") {
+    params.set("status", status);
+  }
+
+  const suffix = params.toString() ? `?${params.toString()}` : "";
+  const response = await apiClient.get<StoryListResponse>(`/stories/me/list${suffix}`);
+  return response.map(mapStory);
+}
+
+export async function getMyStoryStats(): Promise<MyStoryStats> {
+  const response = await apiClient.get<MyStoryStatsResponse>("/stories/me/stats");
+  return {
+    summary: {
+      totalStories: response.summary.total_stories ?? 0,
+      publishedStories: response.summary.published_stories ?? 0,
+      totalReads: response.summary.total_reads ?? 0,
+      totalLikes: response.summary.total_likes ?? 0,
+      totalComments: response.summary.total_comments ?? 0,
+      totalRatings: response.summary.total_ratings ?? 0,
+      avgRating: Number(response.summary.avg_rating ?? 0),
+    },
+    topStories: (response.top_stories ?? []).map((item) => ({
+      id: item.id,
+      title: item.title,
+      slug: item.slug,
+      status: item.status,
+      updatedAt: item.updated_at,
+      chapterCount: item.chapter_count ?? 0,
+      readCount: item.read_count ?? 0,
+      likeCount: item.like_count ?? 0,
+      commentCount: item.comment_count ?? 0,
+      rating: Number(item.rating ?? 0),
+      ratingCount: item.rating_count ?? 0,
+    })),
+  };
+}
+
+export async function getMyAuthorDashboard(): Promise<AuthorDashboardData> {
+  const response = await apiClient.get<AuthorDashboardResponse>("/stories/me/dashboard");
+
+  return {
+    summary: {
+      totalStories: response.summary.total_stories ?? 0,
+      publishedStories: response.summary.published_stories ?? 0,
+      draftStories: response.summary.draft_stories ?? 0,
+      archivedStories: response.summary.archived_stories ?? 0,
+      totalChapters: response.summary.total_chapters ?? 0,
+      totalReads: response.summary.total_reads ?? 0,
+      totalLikes: response.summary.total_likes ?? 0,
+      totalComments: response.summary.total_comments ?? 0,
+      totalRatings: response.summary.total_ratings ?? 0,
+      avgRating: Number(response.summary.avg_rating ?? 0),
+    },
+    readTrend7d: (response.read_trend_7d ?? []).map((point) => ({
+      date: point.date,
+      reads: point.reads ?? 0,
+    })),
+    topStories: (response.top_stories ?? []).map((item) => ({
+      id: item.id,
+      title: item.title,
+      slug: item.slug,
+      status: item.status,
+      updatedAt: item.updated_at,
+      chapterCount: item.chapter_count ?? 0,
+      readCount: item.read_count ?? 0,
+      likeCount: item.like_count ?? 0,
+      commentCount: item.comment_count ?? 0,
+      rating: Number(item.rating ?? 0),
+      ratingCount: item.rating_count ?? 0,
+    })),
+    topChapters: (response.top_chapters ?? []).map((item) => ({
+      id: item.id,
+      chapterNumber: item.chapter_number,
+      title: item.title,
+      status: item.status,
+      updatedAt: item.updated_at,
+      story: {
+        id: item.story.id,
+        title: item.story.title,
+        slug: item.story.slug,
+      },
+      likeCount: item.like_count ?? 0,
+      commentCount: item.comment_count ?? 0,
+      engagementScore: item.engagement_score ?? 0,
+    })),
+    needsAttention: (response.needs_attention ?? []).map((item) => ({
+      storyId: item.story_id,
+      title: item.title,
+      slug: item.slug,
+      reason: item.reason,
+    })),
+  };
 }
 
 export async function getStoryDetail(slug: string): Promise<StoryDetail> {
@@ -201,4 +382,17 @@ export async function createStory(payload: CreateStoryPayload): Promise<StoryDet
   });
 
   return getStoryDetail(response.story.slug);
+}
+
+export async function updateStoryStatus(
+  storyId: string,
+  status: StoryStatus,
+): Promise<void> {
+  await apiClient.patch<UpdateStoryResponse>(`/stories/${storyId}`, {
+    body: { status },
+  });
+}
+
+export async function deleteStory(storyId: string): Promise<void> {
+  await apiClient.delete<DeleteStoryResponse>(`/stories/${storyId}`);
 }

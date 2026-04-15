@@ -1,10 +1,15 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { hasAdminSession } from "@/features/auth/auth-guard";
+import { hasBackofficeSession } from "@/features/auth/auth-guard";
 import { login } from "@/features/auth/services/auth-service";
-import { clearAuthSession, setAuthSession } from "@/features/auth/storage";
+import {
+  clearAuthSession,
+  getStoredUser,
+  setAuthSession,
+} from "@/features/auth/storage";
+import { getDefaultPathByRole } from "@/lib/constants/routes";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -13,12 +18,13 @@ export default function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const nextPath = searchParams.get("next") || "/dashboard";
+  const nextPath = searchParams.get("next");
 
   useEffect(() => {
-    if (hasAdminSession()) {
-      router.replace(nextPath);
-    }
+    if (!hasBackofficeSession()) return;
+
+    const storedUser = getStoredUser();
+    router.replace(nextPath || getDefaultPathByRole(storedUser?.role));
   }, [nextPath, router]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -32,9 +38,9 @@ export default function LoginPage() {
         password,
       });
 
-      if (result.user.role !== "admin") {
+      if (result.user.role !== "admin" && result.user.role !== "author") {
         clearAuthSession();
-        setErrorMessage("Tài khoản này không có quyền truy cập quản trị.");
+        setErrorMessage("Tài khoản này không có quyền truy cập backoffice.");
         return;
       }
 
@@ -43,7 +49,7 @@ export default function LoginPage() {
         user: result.user,
       });
 
-      router.replace(nextPath);
+      router.replace(nextPath || getDefaultPathByRole(result.user.role));
     } catch (error) {
       const message =
         error instanceof Error && error.message
@@ -59,14 +65,14 @@ export default function LoginPage() {
     <div className="w-full max-w-md space-y-8">
       <div className="space-y-3">
         <span className="inline-flex rounded-lg bg-accent-soft px-3 py-1 text-sm font-semibold text-accent-strong">
-          Đăng nhập quản trị
+          Đăng nhập backoffice
         </span>
         <div>
           <h2 className="text-3xl font-semibold tracking-tight text-foreground">
             Chào mừng quay lại
           </h2>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            Nhập thông tin đăng nhập để tiếp tục vào hệ thống quản trị InkTrail.
+            Đăng nhập bằng tài khoản admin hoặc author để tiếp tục làm việc.
           </p>
         </div>
       </div>

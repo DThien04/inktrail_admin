@@ -1,9 +1,9 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { AuthUser } from "@/features/auth/types";
-import { ADMIN_NAV_ITEMS } from "@/lib/constants/routes";
+import { getNavItemsByRole } from "@/lib/constants/routes";
 
 type AdminTopbarProps = {
   isSidebarOpen: boolean;
@@ -37,10 +37,11 @@ export function AdminTopbar({
   onLogout,
 }: AdminTopbarProps) {
   const pathname = usePathname();
+  const navItems = getNavItemsByRole(user?.role);
   const currentItem =
-    ADMIN_NAV_ITEMS.find(
+    navItems.find(
       (item) => pathname === item.href || pathname.startsWith(`${item.href}/`),
-    ) ?? ADMIN_NAV_ITEMS[0];
+    ) ?? navItems[0];
 
   return (
     <header className="data-card panel-divider flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
@@ -91,7 +92,7 @@ export function AdminTopbar({
           </Link>
         )}
         <div className="rounded-lg bg-accent px-3 py-2 text-sm font-medium text-white">
-          Admin
+          {user?.role === "author" ? "Tác giả" : "Quản trị"}
         </div>
       </div>
     </header>

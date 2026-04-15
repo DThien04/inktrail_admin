@@ -1,15 +1,19 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ADMIN_NAV_ITEMS } from "@/lib/constants/routes";
+import { getNavItemsByRole } from "@/lib/constants/routes";
+import type { AuthUser } from "@/features/auth/types";
 
 type AdminSidebarProps = {
   isOpen: boolean;
+  role?: AuthUser["role"];
 };
 
-export function AdminSidebar({ isOpen }: AdminSidebarProps) {
+export function AdminSidebar({ isOpen, role }: AdminSidebarProps) {
   const pathname = usePathname();
+  const navItems = getNavItemsByRole(role);
+  const title = role === "author" ? "Tác giả" : "Quản trị";
 
   return (
     <aside
@@ -25,7 +29,7 @@ export function AdminSidebar({ isOpen }: AdminSidebarProps) {
             <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">
               InkTrail
             </p>
-            <h2 className="mt-2 text-lg font-semibold text-foreground">Admin</h2>
+            <h2 className="mt-2 text-lg font-semibold text-foreground">{title}</h2>
             <div className="mt-3 h-1 w-14 rounded-full bg-accent" />
           </div>
         ) : (
@@ -34,7 +38,7 @@ export function AdminSidebar({ isOpen }: AdminSidebarProps) {
       </div>
 
       <nav className="mt-4 space-y-1">
-        {ADMIN_NAV_ITEMS.map((item) => {
+        {navItems.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
           return (
             <Link
@@ -64,7 +68,7 @@ export function AdminSidebar({ isOpen }: AdminSidebarProps) {
 
       <div className="mt-auto rounded-lg border border-border bg-surface-muted p-3">
         <p className="text-xs text-muted-foreground">
-          {isOpen ? "San sang noi env, api client va token storage." : "JWT"}
+          {isOpen ? "Sẵn sàng kết nối API và phân quyền." : "JWT"}
         </p>
       </div>
     </aside>

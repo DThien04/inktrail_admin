@@ -1,4 +1,4 @@
-export default function AuthLayout({
+﻿export default function AuthLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
@@ -7,15 +7,15 @@ export default function AuthLayout({
         <div className="hidden border-r border-border bg-surface-muted p-10 lg:flex lg:flex-col lg:justify-center">
           <div className="max-w-lg space-y-5">
             <span className="inline-flex rounded-lg bg-accent-soft px-4 py-2 text-sm font-semibold text-accent-strong">
-              InkTrail Admin
+              InkTrail Backoffice
             </span>
             <div className="space-y-3">
               <h1 className="text-4xl font-semibold leading-tight text-foreground">
-                Đăng nhập vào khu vực quản trị
+                Đăng nhập vào khu vực quản trị nội dung
               </h1>
               <p className="text-base leading-7 text-muted-foreground">
-                Sử dụng tài khoản quản trị viên để truy cập hệ thống quản lý truyện,
-                chương, người dùng và nội dung hiển thị trên nền tảng.
+                Admin quản lý toàn hệ thống. Author quản lý truyện và chương của
+                riêng mình.
               </p>
             </div>
           </div>

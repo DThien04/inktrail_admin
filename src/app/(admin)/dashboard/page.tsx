@@ -1,8 +1,20 @@
+"use client";
+
+import { useState } from "react";
 import { DashboardMetricCard } from "@/features/dashboard/components/dashboard-metric-card";
 import { QuickLinkCard } from "@/features/dashboard/components/quick-link-card";
 import { DASHBOARD_METRICS, QUICK_LINKS } from "@/features/dashboard/constants";
+import { AuthorDashboardPanel } from "@/features/dashboard/components/author-dashboard-panel";
+import { getStoredUser } from "@/features/auth/storage";
+import type { AuthUser } from "@/features/auth/types";
 
 export default function DashboardPage() {
+  const [user] = useState<AuthUser | null>(() => getStoredUser());
+
+  if (user?.role === "author") {
+    return <AuthorDashboardPanel />;
+  }
+
   return (
     <div className="space-y-6">
       <section className="data-card overflow-hidden p-6 sm:p-8">
@@ -13,7 +25,7 @@ export default function DashboardPage() {
                 Tổng quan
               </h1>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-                Khung dashboard cơ bản để nối số liệu truyện, chương, người dùng và banner.
+                Dashboard dành cho quản trị viên hệ thống.
               </p>
             </div>
           </div>

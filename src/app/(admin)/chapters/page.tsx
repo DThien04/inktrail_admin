@@ -1,4 +1,4 @@
-import { PageSectionHeader } from "@/components/layout/page-section-header";
+﻿import { PageSectionHeader } from "@/components/layout/page-section-header";
 import { ChaptersManager } from "@/features/chapters/components/chapters-manager";
 
 export default function ChaptersPage() {

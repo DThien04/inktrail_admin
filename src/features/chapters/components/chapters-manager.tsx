@@ -15,7 +15,11 @@ import type {
   ChapterStatus,
   UpdateChapterPayload,
 } from "@/features/chapters/types";
-import { getAdminStories } from "@/features/stories/services/stories-service";
+import { getStoredUser } from "@/features/auth/storage";
+import {
+  getAdminStories,
+  getMyStories,
+} from "@/features/stories/services/stories-service";
 import type { StoryListItem } from "@/features/stories/types";
 
 function formatDate(value: string | null) {
@@ -85,7 +89,11 @@ export function ChaptersManager() {
       setErrorMessage("");
 
       try {
-        const response = await getAdminStories({ status: "all" });
+        const currentUser = getStoredUser();
+        const response =
+          currentUser?.role === "admin"
+            ? await getAdminStories({ status: "all" })
+            : await getMyStories({ status: "all" });
         if (!isMounted) return;
 
         setStories(response);
