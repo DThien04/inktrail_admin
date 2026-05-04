@@ -1,4 +1,5 @@
-export type StoryStatus = "draft" | "published" | "archived";
+export type StoryStatus = "draft" | "published";
+export type ModerationStatus = "pending" | "approved" | "rejected" | "failed";
 
 export type StoryGenre = {
   id: string;
@@ -16,6 +17,11 @@ export type StoryListItem = {
   rating: number;
   ratingCount: number;
   status: StoryStatus;
+  moderationStatus: ModerationStatus | null;
+  moderationCheckedAt: string | null;
+  moderationCategories: string[];
+  moderationConfidence: number | null;
+  moderationReason: string | null;
   updatedAt: string;
   author: {
     id: string;
@@ -33,6 +39,11 @@ export type StoryDetail = {
   coverUrl: string | null;
   readCount: number;
   status: StoryStatus;
+  moderationStatus: ModerationStatus | null;
+  moderationCheckedAt: string | null;
+  moderationCategories: string[];
+  moderationConfidence: number | null;
+  moderationReason: string | null;
   updatedAt: string;
   chapterCount: number;
   author: {
@@ -56,7 +67,6 @@ export type UpdateStoryPayload = {
   slug: string;
   description: string;
   coverFile: File | null;
-  status: StoryStatus;
   genreIds: string[];
 };
 
@@ -65,7 +75,6 @@ export type CreateStoryPayload = {
   slug: string;
   description: string;
   coverFile: File | null;
-  status: StoryStatus;
   genreIds: string[];
 };
 
@@ -102,7 +111,6 @@ export type AuthorDashboardSummary = {
   totalStories: number;
   publishedStories: number;
   draftStories: number;
-  archivedStories: number;
   totalChapters: number;
   totalReads: number;
   totalLikes: number;

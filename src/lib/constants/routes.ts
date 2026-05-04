@@ -1,18 +1,19 @@
 ﻿import type { AuthUser } from "@/features/auth/types";
 
 export const ADMIN_NAV_ITEMS = [
-  { href: "/dashboard", label: "Tổng quan", shortLabel: "Dash" },
-  { href: "/stories", label: "Quản lý truyện", shortLabel: "Truyện" },
-  { href: "/genres", label: "Quản lý thể loại", shortLabel: "Thể loại" },
-  { href: "/banners", label: "Quản lý banner", shortLabel: "Banner" },
-  { href: "/chapters", label: "Quản lý chương", shortLabel: "Chương" },
-  { href: "/users", label: "Người dùng", shortLabel: "User" },
+  { href: "/dashboard", label: "Tổng quan", icon: "dashboard" },
+  { href: "/stories", label: "Quản lý truyện", icon: "stories" },
+  { href: "/reports", label: "Báo cáo", icon: "reports" },
+  { href: "/genres", label: "Quản lý thể loại", icon: "genres" },
+  { href: "/chapters", label: "Quản lý chương", icon: "chapters" },
+  { href: "/users", label: "Người dùng", icon: "users" },
+  { href: "/author-applications", label: "Duyệt tác giả", icon: "author" },
 ] as const;
 
 export const AUTHOR_NAV_ITEMS = [
-  { href: "/dashboard", label: "Dashboard", shortLabel: "Dash" },
-  { href: "/my-stories", label: "Truyện của tôi", shortLabel: "Truyện" },
-  { href: "/chapters", label: "Quản lý chương", shortLabel: "Chương" },
+  { href: "/dashboard", label: "Dashboard", icon: "dashboard" },
+  { href: "/my-stories", label: "Truyện của tôi", icon: "stories" },
+  { href: "/chapters", label: "Quản lý chương", icon: "chapters" },
 ] as const;
 
 export function getNavItemsByRole(role?: AuthUser["role"]) {

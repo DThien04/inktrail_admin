@@ -1,37 +1,32 @@
-export const DASHBOARD_METRICS = [
+﻿export const DASHBOARD_METRICS = [
   {
-    label: "Tổng truyện",
+    label: "Tá»•ng truyá»‡n",
     value: "0",
-    helper: "Sẽ nối từ endpoint thống kê hệ thống.",
+    helper: "Sáº½ ná»‘i tá»« endpoint thá»‘ng kÃª há»‡ thá»‘ng.",
   },
   {
-    label: "Chương chờ duyệt",
+    label: "ChÆ°Æ¡ng chá» duyá»‡t",
     value: "0",
-    helper: "Dành cho luồng kiểm duyệt nội dung của quản trị viên.",
+    helper: "DÃ nh cho luá»“ng kiá»ƒm duyá»‡t ná»™i dung cá»§a quáº£n trá»‹ viÃªn.",
   },
   {
-    label: "Tài khoản tác giả",
+    label: "TÃ i khoáº£n tÃ¡c giáº£",
     value: "0",
-    helper: "Lấy từ danh sách người dùng role author.",
-  },
-  {
-    label: "Banner trang chủ",
-    value: "0",
-    helper: "Số banner đang bật trên trang chủ.",
-  },
-];
+    helper: "Láº¥y tá»« danh sÃ¡ch ngÆ°á»i dÃ¹ng role author.",
+  },];
 
 export const QUICK_LINKS = [
   {
-    title: "Quản lý truyện",
+    title: "Quáº£n lÃ½ truyá»‡n",
     description:
-      "Xem danh sách truyện, lọc theo trạng thái và vào trang chi tiết để chỉnh sửa metadata.",
+      "Xem danh sÃ¡ch truyá»‡n, lá»c theo tráº¡ng thÃ¡i vÃ  vÃ o trang chi tiáº¿t Ä‘á»ƒ chá»‰nh sá»­a metadata.",
     badge: "Stories",
   },
   {
-    title: "Quản lý người dùng",
+    title: "Quáº£n lÃ½ ngÆ°á»i dÃ¹ng",
     description:
-      "Theo dõi tài khoản admin, author, reader và xử lý các vấn đề phân quyền.",
+      "Theo dÃµi tÃ i khoáº£n admin, author, reader vÃ  xá»­ lÃ½ cÃ¡c váº¥n Ä‘á» phÃ¢n quyá»n.",
     badge: "Users",
   },
 ];
+

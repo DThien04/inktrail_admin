@@ -5,7 +5,6 @@ import { useEffect, useMemo, useState } from "react";
 import type {
   CreateStoryPayload,
   GenreOption,
-  StoryStatus,
 } from "@/features/stories/types";
 
 type StoryCreatePanelProps = {
@@ -33,7 +32,6 @@ function buildEmptyCreateForm(): CreateStoryPayload {
     slug: "",
     description: "",
     coverFile: null,
-    status: "draft",
     genreIds: [],
   };
 }
@@ -148,23 +146,12 @@ export function StoryCreatePanel({
                 />
               </label>
 
-              <label className="space-y-2 text-sm">
+              <div className="space-y-2 text-sm">
                 <span className="font-medium text-foreground">Trạng thái</span>
-                <select
-                  value={form.status}
-                  onChange={(event) =>
-                    setForm((current) => ({
-                      ...current,
-                      status: event.target.value as StoryStatus,
-                    }))
-                  }
-                  className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-accent"
-                >
-                  <option value="draft">Bản nháp</option>
-                  <option value="published">Đang phát hành</option>
-                  <option value="archived">Lưu trữ</option>
-                </select>
-              </label>
+                <div className="rounded-lg border border-border bg-surface-muted px-3 py-2 text-muted-foreground">
+                  Tạo mới mặc định là bản nháp
+                </div>
+              </div>
             </div>
 
             <label className="space-y-2 text-sm">

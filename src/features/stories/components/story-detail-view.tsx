@@ -19,7 +19,6 @@ import type {
 const STATUS_LABELS: Record<StoryStatus, string> = {
   draft: "Bản nháp",
   published: "Đang phát hành",
-  archived: "Lưu trữ",
 };
 
 function formatDate(value: string) {
@@ -45,7 +44,6 @@ function buildInitialForm(story: StoryDetail): UpdateStoryPayload {
     slug: story.slug,
     description: story.description || "",
     coverFile: null,
-    status: story.status,
     genreIds: story.genres.map((genre) => genre.id),
   };
 }
@@ -528,28 +526,12 @@ export function StoryDetailView({ slug }: { slug: string }) {
           </label>
 
           <div className="grid gap-4 md:grid-cols-2">
-            <label className="space-y-2 text-sm">
+            <div className="space-y-2 text-sm">
               <span className="font-medium text-foreground">Trạng thái</span>
-              <select
-                value={form.status}
-                disabled={!isEditing || isSaving}
-                onChange={(event) =>
-                  setForm((current) =>
-                    current
-                      ? {
-                          ...current,
-                          status: event.target.value as StoryStatus,
-                        }
-                      : current,
-                  )
-                }
-                className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-accent disabled:bg-surface-muted"
-              >
-                <option value="draft">Bản nháp</option>
-                <option value="published">Đang phát hành</option>
-                <option value="archived">Lưu trữ</option>
-              </select>
-            </label>
+              <div className="rounded-lg border border-border bg-surface-muted px-3 py-2 text-muted-foreground">
+                Trạng thái được đổi bằng thao tác xuất bản/thu hồi riêng.
+              </div>
+            </div>
 
             <div className="space-y-2 text-sm">
               <span className="font-medium text-foreground">Thể loại</span>

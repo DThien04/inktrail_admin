@@ -18,7 +18,6 @@ const FILTERS: Array<{ label: string; value: StoryStatus | "all" }> = [
   { label: "Tất cả", value: "all" },
   { label: "Bản nháp", value: "draft" },
   { label: "Đang phát hành", value: "published" },
-  { label: "Lưu trữ", value: "archived" },
 ];
 
 export function StoriesTableToolbar({

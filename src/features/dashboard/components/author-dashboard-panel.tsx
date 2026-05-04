@@ -15,7 +15,6 @@ const EMPTY_DASHBOARD: AuthorDashboardData = {
     totalStories: 0,
     publishedStories: 0,
     draftStories: 0,
-    archivedStories: 0,
     totalChapters: 0,
     totalReads: 0,
     totalLikes: 0,

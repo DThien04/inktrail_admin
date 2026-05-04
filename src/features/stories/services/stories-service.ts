@@ -27,6 +27,11 @@ type StoryListResponse = Array<{
   rating?: number;
   rating_count?: number;
   status: StoryStatus;
+  moderation_status?: "pending" | "approved" | "rejected" | "failed" | null;
+  moderation_checked_at?: string | null;
+  moderation_categories?: string[];
+  moderation_confidence?: number | null;
+  moderation_reason?: string | null;
   updated_at: string;
   author: {
     id: string;
@@ -44,6 +49,11 @@ type StoryDetailResponse = {
   cover_url: string | null;
   read_count: number;
   status: StoryStatus;
+  moderation_status?: "pending" | "approved" | "rejected" | "failed" | null;
+  moderation_checked_at?: string | null;
+  moderation_categories?: string[];
+  moderation_confidence?: number | null;
+  moderation_reason?: string | null;
   updated_at: string;
   chapter_count: number;
   author: {
@@ -65,6 +75,11 @@ type UpdateStoryResponse = {
     cover_url: string | null;
     read_count: number;
     status: StoryStatus;
+    moderation_status?: "pending" | "approved" | "rejected" | "failed" | null;
+    moderation_checked_at?: string | null;
+    moderation_categories?: string[];
+    moderation_confidence?: number | null;
+    moderation_reason?: string | null;
     updated_at: string;
     genres: ApiStoryGenre[];
   };
@@ -111,7 +126,6 @@ type AuthorDashboardResponse = {
     total_stories: number;
     published_stories: number;
     draft_stories: number;
-    archived_stories: number;
     total_chapters: number;
     total_reads: number;
     total_likes: number;
@@ -167,6 +181,11 @@ function mapStory(item: StoryListResponse[number]): StoryListItem {
     rating: Number(item.rating ?? 0),
     ratingCount: item.rating_count ?? 0,
     status: item.status,
+    moderationStatus: item.moderation_status ?? null,
+    moderationCheckedAt: item.moderation_checked_at ?? null,
+    moderationCategories: item.moderation_categories ?? [],
+    moderationConfidence: item.moderation_confidence ?? null,
+    moderationReason: item.moderation_reason ?? null,
     updatedAt: item.updated_at,
     author: item.author
       ? {
@@ -188,6 +207,11 @@ function mapStoryDetail(response: StoryDetailResponse): StoryDetail {
     coverUrl: response.cover_url,
     readCount: response.read_count ?? 0,
     status: response.status,
+    moderationStatus: response.moderation_status ?? null,
+    moderationCheckedAt: response.moderation_checked_at ?? null,
+    moderationCategories: response.moderation_categories ?? [],
+    moderationConfidence: response.moderation_confidence ?? null,
+    moderationReason: response.moderation_reason ?? null,
     updatedAt: response.updated_at,
     chapterCount: response.chapter_count ?? 0,
     author: {
@@ -273,7 +297,6 @@ export async function getMyAuthorDashboard(): Promise<AuthorDashboardData> {
       totalStories: response.summary.total_stories ?? 0,
       publishedStories: response.summary.published_stories ?? 0,
       draftStories: response.summary.draft_stories ?? 0,
-      archivedStories: response.summary.archived_stories ?? 0,
       totalChapters: response.summary.total_chapters ?? 0,
       totalReads: response.summary.total_reads ?? 0,
       totalLikes: response.summary.total_likes ?? 0,
@@ -348,7 +371,6 @@ export async function updateStory(
   body.set("title", payload.title);
   body.set("slug", payload.slug);
   body.set("description", payload.description);
-  body.set("status", payload.status);
   body.set("genre_ids", JSON.stringify(payload.genreIds));
 
   if (payload.coverFile) {
@@ -370,7 +392,6 @@ export async function createStory(payload: CreateStoryPayload): Promise<StoryDet
   body.set("title", payload.title);
   body.set("slug", payload.slug);
   body.set("description", payload.description);
-  body.set("status", payload.status);
   body.set("genre_ids", JSON.stringify(payload.genreIds));
 
   if (payload.coverFile) {

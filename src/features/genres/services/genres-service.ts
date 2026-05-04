@@ -71,3 +71,13 @@ export async function updateGenre(
 
   return mapGenre(response.genre);
 }
+
+export async function activateGenre(genreId: string): Promise<GenreItem> {
+  const response = await apiClient.post<GenreMutationResponse>(`/genres/${genreId}/activate`);
+  return mapGenre(response.genre);
+}
+
+export async function deactivateGenre(genreId: string): Promise<GenreItem> {
+  const response = await apiClient.post<GenreMutationResponse>(`/genres/${genreId}/deactivate`);
+  return mapGenre(response.genre);
+}
