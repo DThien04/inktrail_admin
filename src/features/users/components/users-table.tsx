@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { Pagination } from "@/components/ui/pagination";
@@ -28,13 +28,11 @@ function formatDate(value: string) {
 
 function roleLabel(role: UserRole) {
   if (role === "admin") return "Admin";
-  if (role === "author") return "Tác giả";
   return "Độc giả";
 }
 
 function roleClass(role: UserRole) {
   if (role === "admin") return "border-red-200 bg-red-50 text-red-700";
-  if (role === "author") return "border-amber-200 bg-amber-50 text-amber-700";
   return "border-slate-200 bg-slate-50 text-slate-700";
 }
 
@@ -274,7 +272,7 @@ export function UsersTable() {
       {isFilterOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4">
           <div className="w-full max-w-md rounded-xl border border-border bg-white p-5 shadow-sm">
-            <h3 className="text-lg font-semibold text-foreground">Bộ lọc người dùng</h3>
+            <h3 className="text-lg font-semibold text-foreground">Bộ lọc ngÆ°á»i dÃ¹ng</h3>
             <div className="mt-4">
               <label className="space-y-1.5 text-sm">
                 <span className="font-medium text-foreground">Vai trò</span>
@@ -284,9 +282,7 @@ export function UsersTable() {
                   className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-accent"
                 >
                   <option value="all">Tất cả</option>
-                  <option value="admin">Admin</option>
-                  <option value="author">Tác giả</option>
-                  <option value="reader">Độc giả</option>
+                  <option value="admin">Admin</option>                  <option value="reader">Độc giả</option>
                 </select>
               </label>
             </div>
@@ -319,4 +315,6 @@ export function UsersTable() {
     </section>
   );
 }
+
+
 

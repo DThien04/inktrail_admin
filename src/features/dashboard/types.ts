@@ -1,7 +1,6 @@
 export type AdminDashboardSummary = {
   totals: {
     users: number;
-    authors: number;
     stories: number;
     chapters: number;
     openReportCases: number;
@@ -69,4 +68,3 @@ export type AdminDashboardQueueItem = {
       }
     | null;
 };
-

@@ -274,6 +274,11 @@ export function StoryDetailView({ slug }: { slug: string }) {
             <button
               type="button"
               onClick={() => {
+                if (story.status === "published") {
+                  setErrorMessage("Truyện đã xuất bản. Hãy thu hồi về bản nháp trước khi chỉnh sửa.");
+                  setSaveMessage("");
+                  return;
+                }
                 setErrorMessage("");
                 setSaveMessage("");
                 setIsEditing(true);

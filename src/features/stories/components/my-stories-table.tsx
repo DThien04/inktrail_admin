@@ -201,6 +201,11 @@ export function MyStoriesTable() {
   }
 
   async function openEditModal(story: StoryListItem) {
+    if (story.status === "published") {
+      setErrorMessage("Truyện đã xuất bản. Hãy thu hồi về bản nháp trước khi chỉnh sửa.");
+      setSuccessMessage("");
+      return;
+    }
     setIsSavingEdit(true);
     setErrorMessage("");
     try {
@@ -244,6 +249,13 @@ export function MyStoriesTable() {
         await deleteStory(confirmAction.story.id);
         setSuccessMessage("Đã xóa truyện.");
       } else {
+        if (
+          confirmAction.nextStatus === "published" &&
+          (confirmAction.story.moderationStatus === "rejected" ||
+            confirmAction.story.moderationStatus === "failed")
+        ) {
+          throw new Error("Truyện đang bị từ chối. Hãy chỉnh sửa nội dung trước khi xuất bản lại.");
+        }
         await updateStoryStatus(confirmAction.story.id, confirmAction.nextStatus);
         setSuccessMessage(
           confirmAction.nextStatus === "published"

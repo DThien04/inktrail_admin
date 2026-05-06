@@ -8,7 +8,6 @@ import type {
 type SummaryResponse = {
   totals: {
     users: number;
-    authors: number;
     stories: number;
     chapters: number;
     open_report_cases: number;
@@ -56,7 +55,6 @@ export async function getAdminDashboardSummary(): Promise<AdminDashboardSummary>
   return {
     totals: {
       users: response.totals.users ?? 0,
-      authors: response.totals.authors ?? 0,
       stories: response.totals.stories ?? 0,
       chapters: response.totals.chapters ?? 0,
       openReportCases: response.totals.open_report_cases ?? 0,

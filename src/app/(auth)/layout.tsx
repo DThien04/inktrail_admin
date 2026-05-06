@@ -14,8 +14,7 @@
                 Đăng nhập vào khu vực quản trị nội dung
               </h1>
               <p className="text-base leading-7 text-muted-foreground">
-                Admin quản lý toàn hệ thống. Author quản lý truyện và chương của
-                riêng mình.
+                Admin quản lý toàn hệ thống nội dung, người dùng và báo cáo.
               </p>
             </div>
           </div>

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
@@ -43,8 +43,8 @@ export function AdminShell({
 
       try {
         const profile = await getMyProfile();
-        if (profile.role !== "admin" && profile.role !== "author") {
-          throw new Error("Tài khoản này không có quyền truy cập");
+        if (profile.role !== "admin") {
+          throw new Error("TÃ i khoáº£n nÃ y khÃ´ng cÃ³ quyá»n truy cáº­p");
         }
 
         if (!isMounted) return;
@@ -95,7 +95,7 @@ export function AdminShell({
             InkTrail Admin
           </p>
           <h1 className="mt-3 text-xl font-semibold text-foreground">
-            Đang kiểm tra phiên đăng nhập
+            Äang kiá»ƒm tra phiÃªn Ä‘Äƒng nháº­p
           </h1>
         </div>
       </div>
@@ -121,3 +121,4 @@ export function AdminShell({
     </div>
   );
 }
+

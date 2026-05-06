@@ -38,7 +38,7 @@ export default function LoginPage() {
         password,
       });
 
-      if (result.user.role !== "admin" && result.user.role !== "author") {
+      if (result.user.role !== "admin") {
         clearAuthSession();
         setErrorMessage("Tài khoản này không có quyền truy cập backoffice.");
         return;
@@ -72,7 +72,7 @@ export default function LoginPage() {
             Chào mừng quay lại
           </h2>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            Đăng nhập bằng tài khoản admin hoặc author để tiếp tục làm việc.
+            Đăng nhập bằng tài khoản admin để tiếp tục làm việc.
           </p>
         </div>
       </div>

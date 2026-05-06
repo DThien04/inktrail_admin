@@ -7,7 +7,6 @@ import {
   createChapter,
   deleteChapter,
   getChaptersByStory,
-  moveChapter,
   publishChapter,
   unpublishChapter,
   updateChapter,
@@ -28,8 +27,8 @@ type ChapterModalMode = "detail" | "edit" | "create";
 
 type ConfirmAction =
   | { kind: "delete"; chapter: ChapterListItem }
-  | { kind: "move"; chapter: ChapterListItem; direction: "up" | "down" }
   | { kind: "publish"; chapter: ChapterListItem; nextStatus: ChapterStatus };
+const MIN_CHAPTER_WORDS = 500;
 
 function formatDate(value: string | null) {
   if (!value) return "Chưa xuất bản";
@@ -78,15 +77,13 @@ function compareDates(left: string | null, right: string | null) {
 
 function createChapterForm(chapter: ChapterListItem): UpdateChapterPayload {
   return {
-    chapterNumber: chapter.chapterNumber,
     title: chapter.title,
     content: chapter.content,
   };
 }
 
-function createEmptyChapterForm(nextChapterNumber: number): CreateChapterPayload {
+function createEmptyChapterForm(): CreateChapterPayload {
   return {
-    chapterNumber: nextChapterNumber,
     title: "",
     content: "",
   };
@@ -101,6 +98,12 @@ function buildChapterSearchText(chapter: ChapterListItem) {
   ]
     .join(" ")
     .toLowerCase();
+}
+
+function countWords(value: string) {
+  const normalized = String(value || "").trim();
+  if (!normalized) return 0;
+  return normalized.split(/\s+/).filter(Boolean).length;
 }
 
 function ChapterTableHeaderButton({
@@ -276,11 +279,6 @@ export function ChaptersManager() {
     [stories, selectedStoryId],
   );
 
-  const nextChapterNumber = useMemo(() => {
-    if (chapters.length === 0) return 1;
-    return chapters.reduce((max, current) => (current.chapterNumber > max ? current.chapterNumber : max), 0) + 1;
-  }, [chapters]);
-
   const filteredAndSortedChapters = useMemo(() => {
     const query = searchText.trim().toLowerCase();
     const filtered = chapters.filter((chapter) => {
@@ -330,7 +328,7 @@ export function ChaptersManager() {
 
   function openCreateModal() {
     setActiveChapter(null);
-    setChapterForm(createEmptyChapterForm(nextChapterNumber));
+    setChapterForm(createEmptyChapterForm());
     setActiveModalMode("create");
     setErrorMessage("");
     setSuccessMessage("");
@@ -342,6 +340,11 @@ export function ChaptersManager() {
   }
 
   function openEditModal(chapter: ChapterListItem) {
+    if (chapter.status === "published") {
+      setErrorMessage("Chương đã xuất bản. Hãy thu hồi về bản nháp trước khi chỉnh sửa.");
+      setSuccessMessage("");
+      return;
+    }
     setActiveChapter(chapter);
     setChapterForm(createChapterForm(chapter));
     setActiveModalMode("edit");
@@ -362,13 +365,15 @@ export function ChaptersManager() {
     setSuccessMessage("");
   }
 
-  function openConfirmMove(chapter: ChapterListItem, direction: "up" | "down") {
-    setConfirmAction({ kind: "move", chapter, direction });
-    setErrorMessage("");
-    setSuccessMessage("");
-  }
-
   function openConfirmPublish(chapter: ChapterListItem, nextStatus: ChapterStatus) {
+    if (
+      nextStatus === "published" &&
+      (chapter.moderationStatus === "rejected" || chapter.moderationStatus === "failed")
+    ) {
+      setErrorMessage("Chương đang bị từ chối. Hãy chỉnh sửa nội dung trước khi xuất bản lại.");
+      setSuccessMessage("");
+      return;
+    }
     setConfirmAction({ kind: "publish", chapter, nextStatus });
     setErrorMessage("");
     setSuccessMessage("");
@@ -376,6 +381,12 @@ export function ChaptersManager() {
 
   async function handleSaveModal() {
     if (!selectedStoryId || !chapterForm) return;
+    const words = countWords(chapterForm.content);
+    if (words < MIN_CHAPTER_WORDS) {
+      setErrorMessage(`Nội dung chương phải có ít nhất ${MIN_CHAPTER_WORDS} từ.`);
+      setSuccessMessage("");
+      return;
+    }
     setIsSavingChapter(true);
     setErrorMessage("");
     setSuccessMessage("");
@@ -414,9 +425,6 @@ export function ChaptersManager() {
       if (confirmAction.kind === "delete") {
         await deleteChapter(confirmAction.chapter.id);
         setSuccessMessage("Đã xóa chương.");
-      } else if (confirmAction.kind === "move") {
-        await moveChapter(confirmAction.chapter.id, confirmAction.direction);
-        setSuccessMessage("Đã đổi vị trí chương.");
       } else {
         if (confirmAction.nextStatus === "published") {
           await publishChapter(confirmAction.chapter.id);
@@ -652,10 +660,6 @@ export function ChaptersManager() {
                 </tr>
               ) : (
                 paginatedChapters.map((chapter) => {
-                  const chapterIndex = filteredAndSortedChapters.findIndex((item) => item.id === chapter.id);
-                  const canMoveUp = chapterIndex > 0;
-                  const canMoveDown = chapterIndex < filteredAndSortedChapters.length - 1;
-
                   return (
                     <tr key={chapter.id} className="border-t border-border/70">
                       <td className="px-4 py-3">
@@ -710,22 +714,6 @@ export function ChaptersManager() {
                               Thu hồi
                             </button>
                           )}
-                          <button
-                            type="button"
-                            onClick={() => openConfirmMove(chapter, "up")}
-                            disabled={!canMoveUp}
-                            className="rounded-lg border border-border bg-white px-3 py-1.5 text-sm font-medium text-foreground transition hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-50"
-                          >
-                            ↑
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => openConfirmMove(chapter, "down")}
-                            disabled={!canMoveDown}
-                            className="rounded-lg border border-border bg-white px-3 py-1.5 text-sm font-medium text-foreground transition hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-50"
-                          >
-                            ↓
-                          </button>
                           <button
                             type="button"
                             onClick={() => openConfirmDelete(chapter)}
@@ -833,10 +821,6 @@ export function ChaptersManager() {
               <div className="mt-4 space-y-3 text-sm">
                 <div className="grid gap-3 md:grid-cols-3">
                   <div className="rounded-lg border border-border bg-surface-muted px-3 py-3">
-                    <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Số chương</p>
-                    <p className="mt-1 font-semibold text-foreground">{activeChapter.chapterNumber}</p>
-                  </div>
-                  <div className="rounded-lg border border-border bg-surface-muted px-3 py-3">
                     <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Trạng thái</p>
                     <p className="mt-1 font-semibold text-foreground">{statusLabel(activeChapter.status)}</p>
                   </div>
@@ -856,24 +840,7 @@ export function ChaptersManager() {
               </div>
             ) : chapterForm ? (
               <div className="mt-4 space-y-3">
-                <div className="grid gap-3 md:grid-cols-[160px_minmax(0,1fr)]">
-                  <label className="space-y-1.5 text-sm">
-                    <span className="font-medium text-foreground">Số chương</span>
-                    <input
-                      type="number"
-                      min={1}
-                      value={chapterForm.chapterNumber}
-                      onChange={(event) =>
-                        setChapterForm((current) =>
-                          current
-                            ? { ...current, chapterNumber: Number(event.target.value) }
-                            : current,
-                        )
-                      }
-                      className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-accent"
-                    />
-                  </label>
-
+                <div className="grid gap-3 md:grid-cols-1">
                   <label className="space-y-1.5 text-sm">
                     <span className="font-medium text-foreground">Tiêu đề</span>
                     <input
@@ -934,18 +901,14 @@ export function ChaptersManager() {
             <h3 className="text-lg font-semibold text-foreground">
               {confirmAction.kind === "delete"
                 ? "Xóa chương"
-                : confirmAction.kind === "move"
-                  ? "Đổi vị trí chương"
-                  : confirmAction.nextStatus === "published"
+                : confirmAction.nextStatus === "published"
                     ? "Xuất bản chương"
                     : "Thu hồi về nháp"}
             </h3>
             <p className="mt-2 text-sm text-muted-foreground">
               {confirmAction.kind === "delete"
                 ? `Bạn có chắc muốn xóa chương ${confirmAction.chapter.chapterNumber} - ${confirmAction.chapter.title}? Hành động này không thể hoàn tác.`
-                : confirmAction.kind === "move"
-                  ? `Bạn có chắc muốn di chuyển chương ${confirmAction.chapter.chapterNumber} ${confirmAction.direction === "up" ? "lên trên" : "xuống dưới"}?`
-                  : confirmAction.nextStatus === "published"
+                : confirmAction.nextStatus === "published"
                     ? `Bạn có chắc muốn xuất bản chương ${confirmAction.chapter.chapterNumber}? AI sẽ tự kiểm tra khi xuất bản.`
                     : `Bạn có chắc muốn thu hồi chương ${confirmAction.chapter.chapterNumber} về bản nháp?`}
             </p>

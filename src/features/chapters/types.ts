@@ -19,14 +19,12 @@ export type ChapterListItem = {
 };
 
 export type UpdateChapterPayload = {
-  chapterNumber: number;
   title: string;
   content: string;
   status?: ChapterStatus;
 };
 
 export type CreateChapterPayload = {
-  chapterNumber: number;
   title: string;
   content: string;
   status?: ChapterStatus;

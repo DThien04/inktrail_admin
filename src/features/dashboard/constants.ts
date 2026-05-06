@@ -10,9 +10,9 @@
     helper: "DÃ nh cho luá»“ng kiá»ƒm duyá»‡t ná»™i dung cá»§a quáº£n trá»‹ viÃªn.",
   },
   {
-    label: "TÃ i khoáº£n tÃ¡c giáº£",
+    label: "Tài khoản người dùng",
     value: "0",
-    helper: "Láº¥y tá»« danh sÃ¡ch ngÆ°á»i dÃ¹ng role author.",
+    helper: "Lấy từ danh sách người dùng toàn hệ thống.",
   },];
 
 export const QUICK_LINKS = [
@@ -25,7 +25,7 @@ export const QUICK_LINKS = [
   {
     title: "Quáº£n lÃ½ ngÆ°á»i dÃ¹ng",
     description:
-      "Theo dÃµi tÃ i khoáº£n admin, author, reader vÃ  xá»­ lÃ½ cÃ¡c váº¥n Ä‘á» phÃ¢n quyá»n.",
+      "Theo dõi tài khoản admin, reader và xử lý các vấn đề phân quyền.",
     badge: "Users",
   },
 ];

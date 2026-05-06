@@ -277,7 +277,7 @@ export function AdminTopbar({
                 <p className="text-sm font-semibold text-foreground">{userDisplayName}</p>
                 <p className="mt-1 text-xs text-muted-foreground">{user.email}</p>
                 <div className="mt-3 rounded-lg bg-surface-muted px-3 py-2 text-xs font-medium text-foreground">
-                  Vai trò: {user.role === "author" ? "Tác giả" : "Quản trị"}
+                  Vai trò: Quản trị
                 </div>
                 <button
                   type="button"

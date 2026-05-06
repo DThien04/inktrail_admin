@@ -78,7 +78,6 @@ export async function createChapter(
 ): Promise<void> {
   await apiClient.post<CreateChapterResponse>(`/chapters/stories/${storyId}/chapters`, {
     body: {
-      chapter_number: payload.chapterNumber,
       title: payload.title,
       content: payload.content,
       status: payload.status ?? "draft",
@@ -91,7 +90,6 @@ export async function updateChapter(
   payload: UpdateChapterPayload,
 ): Promise<void> {
   const body: Record<string, unknown> = {
-    chapter_number: payload.chapterNumber,
     title: payload.title,
     content: payload.content,
   };
@@ -101,12 +99,6 @@ export async function updateChapter(
 
   await apiClient.patch<UpdateChapterResponse>(`/chapters/${chapterId}`, {
     body,
-  });
-}
-
-export async function moveChapter(chapterId: string, direction: "up" | "down"): Promise<void> {
-  await apiClient.post<{ message: string }>(`/chapters/${chapterId}/move`, {
-    body: { direction },
   });
 }
 

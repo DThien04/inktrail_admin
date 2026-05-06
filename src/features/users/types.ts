@@ -1,4 +1,4 @@
-export type UserRole = "admin" | "author" | "reader";
+export type UserRole = "admin" | "reader";
 
 export type AdminUserItem = {
   id: string;
@@ -8,4 +8,3 @@ export type AdminUserItem = {
   createdAt: string;
   updatedAt: string;
 };
-

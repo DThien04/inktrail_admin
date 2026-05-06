@@ -16,8 +16,7 @@ type NavIconKey =
   | "reports"
   | "genres"
   | "chapters"
-  | "users"
-  | "author";
+  | "users";
 
 function NavIcon({ icon, active }: { icon: NavIconKey; active: boolean }) {
   const color = active ? "text-white" : "text-muted-foreground";
@@ -71,21 +70,13 @@ function NavIcon({ icon, active }: { icon: NavIconKey; active: boolean }) {
           <path d="M4 16c1.3-2.4 3.5-3.6 6-3.6S14.7 13.6 16 16" strokeLinecap="round" />
         </svg>
       );
-    case "author":
-      return (
-        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" className={common}>
-          <path d="M4 14.5V16h1.5l7.8-7.8-1.5-1.5L4 14.5Z" />
-          <path d="m10.8 5.7 1.5 1.5" />
-          <path d="M4 11.8V4.8A1.8 1.8 0 0 1 5.8 3h8.4A1.8 1.8 0 0 1 16 4.8V10" />
-        </svg>
-      );
   }
 }
 
 export function AdminSidebar({ isOpen, role }: AdminSidebarProps) {
   const pathname = usePathname();
   const navItems = getNavItemsByRole(role);
-  const title = role === "author" ? "Tác giả" : "Quản trị";
+  const title = "Quản trị";
 
   return (
     <aside
