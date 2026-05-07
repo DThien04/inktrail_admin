@@ -1,32 +1,32 @@
-﻿export const DASHBOARD_METRICS = [
+export const DASHBOARD_METRICS = [
   {
-    label: "Tá»•ng truyá»‡n",
+    label: "Tổng truyện",
     value: "0",
-    helper: "Sáº½ ná»‘i tá»« endpoint thá»‘ng kÃª há»‡ thá»‘ng.",
+    helper: "Sẽ nối từ endpoint thống kê hệ thống.",
   },
   {
-    label: "ChÆ°Æ¡ng chá» duyá»‡t",
+    label: "Chương chờ duyệt",
     value: "0",
-    helper: "DÃ nh cho luá»“ng kiá»ƒm duyá»‡t ná»™i dung cá»§a quáº£n trá»‹ viÃªn.",
+    helper: "Dành cho luồng kiểm duyệt nội dung của quản trị viên.",
   },
   {
     label: "Tài khoản người dùng",
     value: "0",
     helper: "Lấy từ danh sách người dùng toàn hệ thống.",
-  },];
+  },
+];
 
 export const QUICK_LINKS = [
   {
-    title: "Quáº£n lÃ½ truyá»‡n",
+    title: "Quản lý truyện",
     description:
-      "Xem danh sÃ¡ch truyá»‡n, lá»c theo tráº¡ng thÃ¡i vÃ  vÃ o trang chi tiáº¿t Ä‘á»ƒ chá»‰nh sá»­a metadata.",
+      "Xem danh sách truyện, lọc theo trạng thái và vào trang chi tiết để chỉnh sửa metadata.",
     badge: "Stories",
   },
   {
-    title: "Quáº£n lÃ½ ngÆ°á»i dÃ¹ng",
+    title: "Quản lý người dùng",
     description:
       "Theo dõi tài khoản admin, reader và xử lý các vấn đề phân quyền.",
     badge: "Users",
   },
 ];
-

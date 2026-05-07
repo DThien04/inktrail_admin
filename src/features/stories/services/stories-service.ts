@@ -6,6 +6,7 @@ import type {
   MyStoryStats,
   StoryDetail,
   StoryGenre,
+  StoryTag,
   StoryListItem,
   StoryStatus,
   UpdateStoryPayload,
@@ -15,6 +16,11 @@ type ApiStoryGenre = {
   id: string;
   name: string;
   slug: string;
+};
+
+type ApiStoryTag = {
+  id: string;
+  name: string;
 };
 
 type StoryListResponse = Array<{
@@ -39,6 +45,7 @@ type StoryListResponse = Array<{
     email: string;
   } | null;
   genres: ApiStoryGenre[];
+  tags: ApiStoryTag[];
 }>;
 
 type StoryDetailResponse = {
@@ -63,6 +70,7 @@ type StoryDetailResponse = {
     role: string;
   };
   genres: ApiStoryGenre[];
+  tags: ApiStoryTag[];
 };
 
 type UpdateStoryResponse = {
@@ -82,6 +90,7 @@ type UpdateStoryResponse = {
     moderation_reason?: string | null;
     updated_at: string;
     genres: ApiStoryGenre[];
+    tags: ApiStoryTag[];
   };
 };
 
@@ -170,6 +179,10 @@ function mapGenres(genres: ApiStoryGenre[] | undefined): StoryGenre[] {
   return genres ?? [];
 }
 
+function mapTags(tags: ApiStoryTag[] | undefined): StoryTag[] {
+  return tags ?? [];
+}
+
 function mapStory(item: StoryListResponse[number]): StoryListItem {
   return {
     id: item.id,
@@ -195,6 +208,7 @@ function mapStory(item: StoryListResponse[number]): StoryListItem {
         }
       : null,
     genres: mapGenres(item.genres),
+    tags: mapTags(item.tags),
   };
 }
 
@@ -221,6 +235,7 @@ function mapStoryDetail(response: StoryDetailResponse): StoryDetail {
       role: response.author.role,
     },
     genres: mapGenres(response.genres),
+    tags: mapTags(response.tags),
   };
 }
 
@@ -372,6 +387,7 @@ export async function updateStory(
   body.set("slug", payload.slug);
   body.set("description", payload.description);
   body.set("genre_ids", JSON.stringify(payload.genreIds));
+  body.set("tag_names", JSON.stringify(payload.tagNames));
 
   if (payload.coverFile) {
     body.set("cover_file", payload.coverFile);
@@ -393,6 +409,7 @@ export async function createStory(payload: CreateStoryPayload): Promise<StoryDet
   body.set("slug", payload.slug);
   body.set("description", payload.description);
   body.set("genre_ids", JSON.stringify(payload.genreIds));
+  body.set("tag_names", JSON.stringify(payload.tagNames));
 
   if (payload.coverFile) {
     body.set("cover_file", payload.coverFile);

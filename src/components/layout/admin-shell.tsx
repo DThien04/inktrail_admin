@@ -44,7 +44,7 @@ export function AdminShell({
       try {
         const profile = await getMyProfile();
         if (profile.role !== "admin") {
-          throw new Error("TÃ i khoáº£n nÃ y khÃ´ng cÃ³ quyá»n truy cáº­p");
+          throw new Error("Tài khoản này không có quyền truy cập");
         }
 
         if (!isMounted) return;
@@ -95,7 +95,7 @@ export function AdminShell({
             InkTrail Admin
           </p>
           <h1 className="mt-3 text-xl font-semibold text-foreground">
-            Äang kiá»ƒm tra phiÃªn Ä‘Äƒng nháº­p
+            Đang kiểm tra phiên đăng nhập
           </h1>
         </div>
       </div>

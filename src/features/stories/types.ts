@@ -7,6 +7,11 @@ export type StoryGenre = {
   slug: string;
 };
 
+export type StoryTag = {
+  id: string;
+  name: string;
+};
+
 export type StoryListItem = {
   id: string;
   title: string;
@@ -29,6 +34,7 @@ export type StoryListItem = {
     email: string;
   } | null;
   genres: StoryGenre[];
+  tags: StoryTag[];
 };
 
 export type StoryDetail = {
@@ -53,6 +59,7 @@ export type StoryDetail = {
     role: string;
   };
   genres: StoryGenre[];
+  tags: StoryTag[];
 };
 
 export type GenreOption = {
@@ -68,6 +75,7 @@ export type UpdateStoryPayload = {
   description: string;
   coverFile: File | null;
   genreIds: string[];
+  tagNames: string[];
 };
 
 export type CreateStoryPayload = {
@@ -76,6 +84,7 @@ export type CreateStoryPayload = {
   description: string;
   coverFile: File | null;
   genreIds: string[];
+  tagNames: string[];
 };
 
 export type MyStoryStatsSummary = {

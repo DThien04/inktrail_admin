@@ -51,6 +51,7 @@ function buildEditFormFromStory(story: Awaited<ReturnType<typeof getStoryDetail>
     description: story.description || "",
     coverFile: null,
     genreIds: story.genres.map((item) => item.id),
+    tagNames: story.tags.map((item) => item.name),
   };
 }
 

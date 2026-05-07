@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 /* eslint-disable @next/next/no-img-element */
 
 import Link from "next/link";
@@ -17,8 +17,8 @@ import type {
 } from "@/features/stories/types";
 
 const STATUS_LABELS: Record<StoryStatus, string> = {
-  draft: "Bản nháp",
-  published: "Đang phát hành",
+  draft: "Báº£n nhÃ¡p",
+  published: "Äang phÃ¡t hÃ nh",
 };
 
 function formatDate(value: string) {
@@ -45,7 +45,21 @@ function buildInitialForm(story: StoryDetail): UpdateStoryPayload {
     description: story.description || "",
     coverFile: null,
     genreIds: story.genres.map((genre) => genre.id),
+    tagNames: story.tags.map((tag) => tag.name),
   };
+}
+
+function splitTagInput(value: string) {
+  const unique = new Map<string, string>();
+  for (const item of value.split(/[\n,]/g)) {
+    const normalized = item.trim();
+    if (!normalized) continue;
+    const key = normalized.toLowerCase();
+    if (!unique.has(key)) {
+      unique.set(key, normalized);
+    }
+  }
+  return Array.from(unique.values());
 }
 
 async function getAspectRatioWarning(
@@ -112,7 +126,7 @@ export function StoryDetailView({ slug }: { slug: string }) {
         setErrorMessage(
           error instanceof Error && error.message
             ? error.message
-            : "Không thể tải chi tiết truyện.",
+            : "KhÃ´ng thá»ƒ táº£i chi tiáº¿t truyá»‡n.",
         );
       } finally {
         if (isMounted) {
@@ -129,8 +143,13 @@ export function StoryDetailView({ slug }: { slug: string }) {
   }, [slug]);
 
   const genresText = useMemo(() => {
-    if (!story?.genres.length) return "Chưa gán thể loại";
+    if (!story?.genres.length) return "ChÆ°a gÃ¡n thá»ƒ loáº¡i";
     return story.genres.map((genre) => genre.name).join(", ");
+  }, [story]);
+
+  const tagsText = useMemo(() => {
+    if (!story?.tags.length) return "Chua gan tag";
+    return story.tags.map((tag) => tag.name).join(", ");
   }, [story]);
 
   const coverPreview = useMemo(() => {
@@ -163,7 +182,7 @@ export function StoryDetailView({ slug }: { slug: string }) {
       setForm(buildInitialForm(updatedStory));
       setIsEditing(false);
       setCoverRatioWarning("");
-      setSaveMessage("Đã cập nhật truyện thành công.");
+      setSaveMessage("ÄÃ£ cáº­p nháº­t truyá»‡n thÃ nh cÃ´ng.");
       if (updatedStory.slug !== slug) {
         router.replace(`/stories/${updatedStory.slug}`);
       }
@@ -171,7 +190,7 @@ export function StoryDetailView({ slug }: { slug: string }) {
       setErrorMessage(
         error instanceof Error && error.message
           ? error.message
-          : "Không thể cập nhật truyện.",
+          : "KhÃ´ng thá»ƒ cáº­p nháº­t truyá»‡n.",
       );
     } finally {
       setIsSaving(false);
@@ -194,10 +213,10 @@ export function StoryDetailView({ slug }: { slug: string }) {
           href="/stories"
           className="inline-flex items-center rounded-lg border border-border px-3 py-2 text-sm text-foreground transition hover:bg-surface-muted"
         >
-          Quay lại danh sách truyện
+          Quay láº¡i danh sÃ¡ch truyá»‡n
         </Link>
         <div className="data-card px-6 py-10 text-sm text-muted-foreground">
-          Đang tải chi tiết truyện...
+          Äang táº£i chi tiáº¿t truyá»‡n...
         </div>
       </div>
     );
@@ -210,7 +229,7 @@ export function StoryDetailView({ slug }: { slug: string }) {
           href="/stories"
           className="inline-flex items-center rounded-lg border border-border px-3 py-2 text-sm text-foreground transition hover:bg-surface-muted"
         >
-          Quay lại danh sách truyện
+          Quay láº¡i danh sÃ¡ch truyá»‡n
         </Link>
         <div className="data-card px-6 py-10 text-sm text-accent-strong">
           {errorMessage}
@@ -226,10 +245,10 @@ export function StoryDetailView({ slug }: { slug: string }) {
           href="/stories"
           className="inline-flex items-center rounded-lg border border-border px-3 py-2 text-sm text-foreground transition hover:bg-surface-muted"
         >
-          Quay lại danh sách truyện
+          Quay láº¡i danh sÃ¡ch truyá»‡n
         </Link>
         <div className="data-card px-6 py-10 text-sm text-accent-strong">
-          Không tìm thấy truyện.
+          KhÃ´ng tÃ¬m tháº¥y truyá»‡n.
         </div>
       </div>
     );
@@ -242,7 +261,7 @@ export function StoryDetailView({ slug }: { slug: string }) {
           href="/stories"
           className="inline-flex items-center rounded-lg border border-border px-3 py-2 text-sm text-foreground transition hover:bg-surface-muted"
         >
-          Quay lại danh sách truyện
+          Quay láº¡i danh sÃ¡ch truyá»‡n
         </Link>
 
         <div className="flex flex-wrap gap-2">
@@ -250,7 +269,7 @@ export function StoryDetailView({ slug }: { slug: string }) {
             href={`/chapters?storyId=${story.id}`}
             className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground transition hover:bg-surface-muted"
           >
-            Quản lý chương
+            Quáº£n lÃ½ chÆ°Æ¡ng
           </Link>
           {isEditing ? (
             <>
@@ -259,7 +278,7 @@ export function StoryDetailView({ slug }: { slug: string }) {
                 onClick={resetForm}
                 className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground transition hover:bg-surface-muted"
               >
-                Hủy
+                Há»§y
               </button>
               <button
                 type="submit"
@@ -267,7 +286,7 @@ export function StoryDetailView({ slug }: { slug: string }) {
                 disabled={isSaving}
                 className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-70"
               >
-                {isSaving ? "Đang lưu..." : "Lưu thay đổi"}
+                {isSaving ? "Äang lÆ°u..." : "LÆ°u thay Ä‘á»•i"}
               </button>
             </>
           ) : (
@@ -275,7 +294,7 @@ export function StoryDetailView({ slug }: { slug: string }) {
               type="button"
               onClick={() => {
                 if (story.status === "published") {
-                  setErrorMessage("Truyện đã xuất bản. Hãy thu hồi về bản nháp trước khi chỉnh sửa.");
+                  setErrorMessage("Truyá»‡n Ä‘Ã£ xuáº¥t báº£n. HÃ£y thu há»“i vá» báº£n nhÃ¡p trÆ°á»›c khi chá»‰nh sá»­a.");
                   setSaveMessage("");
                   return;
                 }
@@ -285,7 +304,7 @@ export function StoryDetailView({ slug }: { slug: string }) {
               }}
               className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition hover:bg-accent-strong"
             >
-              Chỉnh sửa truyện
+              Chá»‰nh sá»­a truyá»‡n
             </button>
           )}
         </div>
@@ -314,7 +333,7 @@ export function StoryDetailView({ slug }: { slug: string }) {
               />
             ) : (
               <div className="flex min-h-[280px] items-center justify-center px-6 text-center text-sm text-muted-foreground">
-                Chưa có ảnh bìa
+                ChÆ°a cÃ³ áº£nh bÃ¬a
               </div>
             )}
           </div>
@@ -331,14 +350,14 @@ export function StoryDetailView({ slug }: { slug: string }) {
                 <p className="mt-2 text-sm text-muted-foreground">Slug: /{story.slug}</p>
               </div>
               <p className="text-sm leading-7 text-muted-foreground">
-                {story.description || "Truyện này chưa có mô tả."}
+                {story.description || "Truyá»‡n nÃ y chÆ°a cÃ³ mÃ´ táº£."}
               </p>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               <div className="rounded-xl border border-border bg-surface-muted px-4 py-4">
                 <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
-                  Tác giả
+                  TÃ¡c giáº£
                 </p>
                 <p className="mt-2 text-base font-medium text-foreground">
                   {story.author.displayName}
@@ -348,7 +367,7 @@ export function StoryDetailView({ slug }: { slug: string }) {
 
               <div className="rounded-xl border border-border bg-surface-muted px-4 py-4">
                 <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
-                  Số chương
+                  Sá»‘ chÆ°Æ¡ng
                 </p>
                 <p className="mt-2 text-base font-medium text-foreground">
                   {story.chapterCount}
@@ -357,7 +376,7 @@ export function StoryDetailView({ slug }: { slug: string }) {
 
               <div className="rounded-xl border border-border bg-surface-muted px-4 py-4">
                 <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
-                  Lượt đọc
+                  LÆ°á»£t Ä‘á»c
                 </p>
                 <p className="mt-2 text-base font-medium text-foreground">
                   {formatReadCount(story.readCount)}
@@ -366,7 +385,7 @@ export function StoryDetailView({ slug }: { slug: string }) {
 
               <div className="rounded-xl border border-border bg-surface-muted px-4 py-4">
                 <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
-                  Cập nhật
+                  Cáº­p nháº­t
                 </p>
                 <p className="mt-2 text-base font-medium text-foreground">
                   {formatDate(story.updatedAt)}
@@ -384,15 +403,36 @@ export function StoryDetailView({ slug }: { slug: string }) {
           className="data-card space-y-5 p-6"
         >
           <div>
-            <h2 className="text-lg font-semibold text-foreground">Chỉnh sửa truyện</h2>
+            <h2 className="text-lg font-semibold text-foreground">Chá»‰nh sá»­a truyá»‡n</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Cập nhật thông tin hiển thị, trạng thái và ảnh bìa của truyện.
+              Cáº­p nháº­t thÃ´ng tin hiá»ƒn thá»‹, tráº¡ng thÃ¡i vÃ  áº£nh bÃ¬a cá»§a truyá»‡n.
             </p>
           </div>
 
+          <label className="space-y-2 text-sm">
+            <span className="font-medium text-foreground">Tags</span>
+            <textarea
+              rows={3}
+              value={form.tagNames.join(", ")}
+              disabled={!isEditing || isSaving}
+              onChange={(event) =>
+                setForm((current) =>
+                  current
+                    ? {
+                        ...current,
+                        tagNames: splitTagInput(event.target.value),
+                      }
+                    : current,
+                )
+              }
+              placeholder="Vi du: cuoi truoc yeu sau, hoc duong, chua lanh"
+              className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-accent disabled:bg-surface-muted"
+            />
+          </label>
+
           <div className="grid gap-4 md:grid-cols-2">
             <label className="space-y-2 text-sm">
-              <span className="font-medium text-foreground">Tên truyện</span>
+              <span className="font-medium text-foreground">TÃªn truyá»‡n</span>
               <input
                 value={form.title}
                 disabled={!isEditing || isSaving}
@@ -431,7 +471,7 @@ export function StoryDetailView({ slug }: { slug: string }) {
           </div>
 
           <div className="space-y-2 text-sm">
-            <span className="font-medium text-foreground">Ảnh bìa</span>
+            <span className="font-medium text-foreground">áº¢nh bÃ¬a</span>
             <div className="space-y-3 rounded-xl border border-border bg-surface-muted p-3">
               <div className="flex flex-wrap gap-2">
                 <label className="rounded-lg border border-border px-3 py-2 text-sm text-foreground transition hover:bg-white">
@@ -457,7 +497,7 @@ export function StoryDetailView({ slug }: { slug: string }) {
                       event.currentTarget.value = "";
                     }}
                   />
-                  Chọn ảnh bìa
+                  Chá»n áº£nh bÃ¬a
                 </label>
 
                 {coverPreview ? (
@@ -467,7 +507,7 @@ export function StoryDetailView({ slug }: { slug: string }) {
                     rel="noreferrer"
                     className="rounded-lg border border-border px-3 py-2 text-sm text-foreground transition hover:bg-white"
                   >
-                    Mở ảnh bìa
+                    Má»Ÿ áº£nh bÃ¬a
                   </a>
                 ) : null}
 
@@ -487,22 +527,22 @@ export function StoryDetailView({ slug }: { slug: string }) {
                   }}
                   className="rounded-lg border border-border px-3 py-2 text-sm text-foreground transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Bỏ ảnh đã chọn
+                  Bá» áº£nh Ä‘Ã£ chá»n
                 </button>
               </div>
 
               {form.coverFile ? (
                 <p className="text-sm text-muted-foreground">
-                  Ảnh sẽ upload khi lưu: {form.coverFile.name}
+                  áº¢nh sáº½ upload khi lÆ°u: {form.coverFile.name}
                 </p>
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  Chưa chọn ảnh mới. Nếu lưu lúc này, hệ thống sẽ giữ nguyên ảnh bìa hiện tại.
+                  ChÆ°a chá»n áº£nh má»›i. Náº¿u lÆ°u lÃºc nÃ y, há»‡ thá»‘ng sáº½ giá»¯ nguyÃªn áº£nh bÃ¬a hiá»‡n táº¡i.
                 </p>
               )}
 
               <p className="text-xs text-muted-foreground">
-                Khuyến cáo: dùng ảnh bìa dọc tỷ lệ 2:3, kích thước tốt nhất 900 x 1350 px.
+                Khuyáº¿n cÃ¡o: dÃ¹ng áº£nh bÃ¬a dá»c tá»· lá»‡ 2:3, kÃ­ch thÆ°á»›c tá»‘t nháº¥t 900 x 1350 px.
               </p>
               {coverRatioWarning ? (
                 <p className="text-xs text-amber-700">{coverRatioWarning}</p>
@@ -511,7 +551,7 @@ export function StoryDetailView({ slug }: { slug: string }) {
           </div>
 
           <label className="space-y-2 text-sm">
-            <span className="font-medium text-foreground">Mô tả</span>
+            <span className="font-medium text-foreground">MÃ´ táº£</span>
             <textarea
               rows={6}
               value={form.description}
@@ -532,14 +572,7 @@ export function StoryDetailView({ slug }: { slug: string }) {
 
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2 text-sm">
-              <span className="font-medium text-foreground">Trạng thái</span>
-              <div className="rounded-lg border border-border bg-surface-muted px-3 py-2 text-muted-foreground">
-                Trạng thái được đổi bằng thao tác xuất bản/thu hồi riêng.
-              </div>
-            </div>
-
-            <div className="space-y-2 text-sm">
-              <span className="font-medium text-foreground">Thể loại</span>
+              <span className="font-medium text-foreground">Thá»ƒ loáº¡i</span>
               <div className="rounded-lg border border-border bg-white px-3 py-3">
                 <div className="grid gap-2 md:grid-cols-2">
                   {genres.map((genre) => {
@@ -582,31 +615,35 @@ export function StoryDetailView({ slug }: { slug: string }) {
         </form>
 
         <div className="data-card p-6">
-          <h2 className="text-lg font-semibold text-foreground">Thông tin hiện tại</h2>
+          <h2 className="text-lg font-semibold text-foreground">ThÃ´ng tin hiá»‡n táº¡i</h2>
 
           <dl className="mt-4 space-y-4 text-sm">
             <div>
-              <dt className="text-muted-foreground">Thể loại</dt>
+              <dt className="text-muted-foreground">Thá»ƒ loáº¡i</dt>
               <dd className="mt-1 text-foreground">{genresText}</dd>
             </div>
             <div>
-              <dt className="text-muted-foreground">Mã truyện</dt>
+              <dt className="text-muted-foreground">Tags</dt>
+              <dd className="mt-1 text-foreground">{tagsText}</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">MÃ£ truyá»‡n</dt>
               <dd className="mt-1 break-all text-foreground">{story.id}</dd>
             </div>
             <div>
-              <dt className="text-muted-foreground">Vai trò tác giả</dt>
+              <dt className="text-muted-foreground">Vai trÃ² tÃ¡c giáº£</dt>
               <dd className="mt-1 text-foreground">{story.author.role}</dd>
             </div>
             <div>
-              <dt className="text-muted-foreground">Ảnh bìa hiện tại</dt>
+              <dt className="text-muted-foreground">áº¢nh bÃ¬a hiá»‡n táº¡i</dt>
               <dd className="mt-1 text-foreground">
-                {story.coverUrl ? "Đã có ảnh bìa" : "Chưa có ảnh bìa"}
+                {story.coverUrl ? "ÄÃ£ cÃ³ áº£nh bÃ¬a" : "ChÆ°a cÃ³ áº£nh bÃ¬a"}
               </dd>
             </div>
             <div>
-              <dt className="text-muted-foreground">Mô tả truyện</dt>
+              <dt className="text-muted-foreground">MÃ´ táº£ truyá»‡n</dt>
               <dd className="mt-1 whitespace-pre-wrap text-foreground">
-                {story.description || "Truyện này chưa có mô tả để hiển thị."}
+                {story.description || "Truyá»‡n nÃ y chÆ°a cÃ³ mÃ´ táº£ Ä‘á»ƒ hiá»ƒn thá»‹."}
               </dd>
             </div>
           </dl>
@@ -615,3 +652,4 @@ export function StoryDetailView({ slug }: { slug: string }) {
     </div>
   );
 }
+
