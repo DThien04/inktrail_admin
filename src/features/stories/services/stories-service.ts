@@ -2,21 +2,14 @@ import { apiClient } from "@/lib/api/client";
 import type {
   AuthorDashboardData,
   CreateStoryPayload,
-  GenreOption,
+  TagOption,
   MyStoryStats,
   StoryDetail,
-  StoryGenre,
   StoryTag,
   StoryListItem,
   StoryStatus,
   UpdateStoryPayload,
 } from "@/features/stories/types";
-
-type ApiStoryGenre = {
-  id: string;
-  name: string;
-  slug: string;
-};
 
 type ApiStoryTag = {
   id: string;
@@ -44,7 +37,6 @@ type StoryListResponse = Array<{
     display_name: string;
     email: string;
   } | null;
-  genres: ApiStoryGenre[];
   tags: ApiStoryTag[];
 }>;
 
@@ -69,7 +61,6 @@ type StoryDetailResponse = {
     avatar_url: string | null;
     role: string;
   };
-  genres: ApiStoryGenre[];
   tags: ApiStoryTag[];
 };
 
@@ -89,7 +80,6 @@ type UpdateStoryResponse = {
     moderation_confidence?: number | null;
     moderation_reason?: string | null;
     updated_at: string;
-    genres: ApiStoryGenre[];
     tags: ApiStoryTag[];
   };
 };
@@ -98,10 +88,9 @@ type DeleteStoryResponse = {
   message: string;
 };
 
-type GenreListResponse = Array<{
+type TagListResponse = Array<{
   id: string;
   name: string;
-  slug: string;
   is_active: boolean;
 }>;
 
@@ -175,10 +164,6 @@ type AuthorDashboardResponse = {
   }>;
 };
 
-function mapGenres(genres: ApiStoryGenre[] | undefined): StoryGenre[] {
-  return genres ?? [];
-}
-
 function mapTags(tags: ApiStoryTag[] | undefined): StoryTag[] {
   return tags ?? [];
 }
@@ -207,7 +192,6 @@ function mapStory(item: StoryListResponse[number]): StoryListItem {
           email: item.author.email,
         }
       : null,
-    genres: mapGenres(item.genres),
     tags: mapTags(item.tags),
   };
 }
@@ -234,7 +218,6 @@ function mapStoryDetail(response: StoryDetailResponse): StoryDetail {
       avatarUrl: response.author.avatar_url,
       role: response.author.role,
     },
-    genres: mapGenres(response.genres),
     tags: mapTags(response.tags),
   };
 }
@@ -365,16 +348,13 @@ export async function getStoryDetail(slug: string): Promise<StoryDetail> {
   return mapStoryDetail(response);
 }
 
-export async function getGenres(): Promise<GenreOption[]> {
-  const response = await apiClient.get<GenreListResponse>(
-    "/genres?include_inactive=true",
-  );
+export async function getTagOptions(): Promise<TagOption[]> {
+  const response = await apiClient.get<TagListResponse>("/tags?include_inactive=true");
 
-  return response.map((genre) => ({
-    id: genre.id,
-    name: genre.name,
-    slug: genre.slug,
-    isActive: Boolean(genre.is_active),
+  return response.map((tag) => ({
+    id: tag.id,
+    name: tag.name,
+    isActive: Boolean(tag.is_active),
   }));
 }
 
@@ -386,7 +366,7 @@ export async function updateStory(
   body.set("title", payload.title);
   body.set("slug", payload.slug);
   body.set("description", payload.description);
-  body.set("genre_ids", JSON.stringify(payload.genreIds));
+  body.set("tag_ids", JSON.stringify(payload.tagIds));
   body.set("tag_names", JSON.stringify(payload.tagNames));
 
   if (payload.coverFile) {
@@ -408,7 +388,7 @@ export async function createStory(payload: CreateStoryPayload): Promise<StoryDet
   body.set("title", payload.title);
   body.set("slug", payload.slug);
   body.set("description", payload.description);
-  body.set("genre_ids", JSON.stringify(payload.genreIds));
+  body.set("tag_ids", JSON.stringify(payload.tagIds));
   body.set("tag_names", JSON.stringify(payload.tagNames));
 
   if (payload.coverFile) {

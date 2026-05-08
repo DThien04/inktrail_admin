@@ -4,8 +4,8 @@ export const ADMIN_NAV_ITEMS = [
   { href: "/dashboard", label: "Tổng quan", icon: "dashboard" },
   { href: "/stories", label: "Quản lý truyện", icon: "stories" },
   { href: "/reports", label: "Báo cáo", icon: "reports" },
-  { href: "/genres", label: "Quản lý thể loại", icon: "genres" },
   { href: "/chapters", label: "Quản lý chương", icon: "chapters" },
+  { href: "/tags", label: "Tags", icon: "tags" },
   { href: "/users", label: "Người dùng", icon: "users" },
 ] as const;
 

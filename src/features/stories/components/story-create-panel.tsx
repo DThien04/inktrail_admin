@@ -4,13 +4,13 @@
 import { useEffect, useMemo, useState } from "react";
 import type {
   CreateStoryPayload,
-  GenreOption,
+  TagOption,
 } from "@/features/stories/types";
 
 type StoryCreatePanelProps = {
   isCreating: boolean;
   submitError: string;
-  genres: GenreOption[];
+  tags: TagOption[];
   onCreate: (payload: CreateStoryPayload) => Promise<void>;
   onClose: () => void;
 };
@@ -32,7 +32,7 @@ function buildEmptyCreateForm(): CreateStoryPayload {
     slug: "",
     description: "",
     coverFile: null,
-    genreIds: [],
+    tagIds: [],
     tagNames: [],
   };
 }
@@ -71,7 +71,7 @@ async function getAspectRatioWarning(file: File, expectedRatio: number, label: s
 export function StoryCreatePanel({
   isCreating,
   submitError,
-  genres,
+  tags,
   onCreate,
   onClose,
 }: StoryCreatePanelProps) {
@@ -272,11 +272,47 @@ export function StoryCreatePanel({
 
             <section className="rounded-[24px] border border-border bg-white p-5">
               <div className="mb-4">
-                <h3 className="text-base font-semibold text-foreground">Tags và thể loại</h3>
+                <h3 className="text-base font-semibold text-foreground">Tags</h3>
               </div>
 
               <div className="space-y-2 text-sm">
-                <span className="font-medium text-foreground">Tags</span>
+                <span className="font-medium text-foreground">Tag có sẵn</span>
+                <div className="flex flex-wrap gap-2">
+                  {tags.map((tag) => {
+                    const checked = form.tagIds.includes(tag.id);
+
+                    return (
+                      <button
+                        key={tag.id}
+                        type="button"
+                        disabled={!tag.isActive}
+                        onClick={() =>
+                          setForm((current) => {
+                            const nextTagIds = checked
+                              ? current.tagIds.filter((id) => id !== tag.id)
+                              : [...current.tagIds, tag.id];
+
+                            return {
+                              ...current,
+                              tagIds: [...new Set(nextTagIds)],
+                            };
+                          })
+                        }
+                        className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${
+                          checked
+                            ? "border-accent bg-accent text-white"
+                            : "border-border bg-surface-muted text-foreground hover:bg-white"
+                        } ${!tag.isActive ? "cursor-not-allowed opacity-50" : ""}`}
+                      >
+                        #{tag.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="mt-4 space-y-2 text-sm">
+                <span className="font-medium text-foreground">Thêm tag mới (tuỳ chọn)</span>
                 {form.tagNames.length ? (
                   <div className="flex flex-wrap gap-2">
                     {form.tagNames.map((tag) => (
@@ -298,45 +334,9 @@ export function StoryCreatePanel({
                       tagNames: splitTagInput(event.target.value),
                     }))
                   }
-                  placeholder="Ví dụ: cưới trước yêu sau, học đường, chữa lành"
+                  placeholder="Ví dụ: cưới trước yêu sau, học đường (tách bằng dấu phẩy)"
                   className="w-full rounded-xl border border-border bg-white px-3 py-2.5 text-sm outline-none focus:border-accent"
                 />
-              </div>
-
-              <div className="mt-4 space-y-2 text-sm">
-                <span className="font-medium text-foreground">Thể loại</span>
-                <div className="flex flex-wrap gap-2">
-                  {genres.map((genre) => {
-                    const checked = form.genreIds.includes(genre.id);
-
-                    return (
-                      <button
-                        key={genre.id}
-                        type="button"
-                        disabled={!genre.isActive}
-                        onClick={() =>
-                          setForm((current) => {
-                            const nextGenreIds = checked
-                              ? current.genreIds.filter((id) => id !== genre.id)
-                              : [...current.genreIds, genre.id];
-
-                            return {
-                              ...current,
-                              genreIds: [...new Set(nextGenreIds)],
-                            };
-                          })
-                        }
-                        className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${
-                          checked
-                            ? "border-accent bg-accent text-white"
-                            : "border-border bg-surface-muted text-foreground hover:bg-white"
-                        } ${!genre.isActive ? "cursor-not-allowed opacity-50" : ""}`}
-                      >
-                        {genre.name}
-                      </button>
-                    );
-                  })}
-                </div>
               </div>
             </section>
           </div>

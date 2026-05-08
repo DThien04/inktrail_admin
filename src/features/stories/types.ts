@@ -1,12 +1,6 @@
 export type StoryStatus = "draft" | "published";
 export type ModerationStatus = "pending" | "approved" | "rejected" | "failed";
 
-export type StoryGenre = {
-  id: string;
-  name: string;
-  slug: string;
-};
-
 export type StoryTag = {
   id: string;
   name: string;
@@ -33,7 +27,6 @@ export type StoryListItem = {
     displayName: string;
     email: string;
   } | null;
-  genres: StoryGenre[];
   tags: StoryTag[];
 };
 
@@ -58,14 +51,12 @@ export type StoryDetail = {
     avatarUrl: string | null;
     role: string;
   };
-  genres: StoryGenre[];
   tags: StoryTag[];
 };
 
-export type GenreOption = {
+export type TagOption = {
   id: string;
   name: string;
-  slug: string;
   isActive: boolean;
 };
 
@@ -74,7 +65,7 @@ export type UpdateStoryPayload = {
   slug: string;
   description: string;
   coverFile: File | null;
-  genreIds: string[];
+  tagIds: string[];
   tagNames: string[];
 };
 
@@ -83,7 +74,7 @@ export type CreateStoryPayload = {
   slug: string;
   description: string;
   coverFile: File | null;
-  genreIds: string[];
+  tagIds: string[];
   tagNames: string[];
 };
 

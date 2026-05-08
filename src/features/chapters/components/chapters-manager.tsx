@@ -465,7 +465,10 @@ export function ChaptersManager() {
   }
 
   function resetFilters() {
+    setSearchText("");
+    setStatusFilter("all");
     setDraftStatusFilter("all");
+    setIsFilterOpen(false);
   }
 
   const activeFilterCount = statusFilter === "all" ? 0 : 1;
@@ -473,7 +476,7 @@ export function ChaptersManager() {
   return (
     <section className="space-y-5">
       <div className="data-card p-4">
-        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_180px]">
+        <div className="grid gap-3 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] lg:items-end">
           <label className="space-y-1.5 text-sm">
             <span className="font-medium text-foreground">Chọn truyện</span>
             <select
@@ -493,20 +496,23 @@ export function ChaptersManager() {
               )}
             </select>
           </label>
-        </div>
-
-        <div className="mt-3 grid gap-3 md:grid-cols-3">
-          <div className="rounded-xl border border-border bg-surface-muted px-3 py-3">
-            <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Slug</p>
-            <p className="mt-1 text-sm font-medium text-foreground">{selectedStory?.slug || "--"}</p>
+          <div className="rounded-xl border border-border bg-surface-muted px-4 py-2.5">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Slug</p>
+              <p className="truncate text-sm font-medium text-foreground">{selectedStory?.slug || "--"}</p>
+            </div>
           </div>
-          <div className="rounded-xl border border-border bg-surface-muted px-3 py-3">
-            <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Trạng thái truyện</p>
-            <p className="mt-1 text-sm font-medium text-foreground">{selectedStory?.status || "--"}</p>
+          <div className="rounded-xl border border-border bg-surface-muted px-4 py-2.5">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Trạng thái</p>
+              <p className="text-sm font-medium text-foreground">{selectedStory?.status || "--"}</p>
+            </div>
           </div>
-          <div className="rounded-xl border border-border bg-surface-muted px-3 py-3">
-            <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Tổng chương</p>
-            <p className="mt-1 text-sm font-medium text-foreground">{chapters.length}</p>
+          <div className="rounded-xl border border-border bg-surface-muted px-4 py-2.5">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Tổng chương</p>
+              <p className="text-sm font-medium text-foreground">{chapters.length}</p>
+            </div>
           </div>
         </div>
       </div>
@@ -519,26 +525,26 @@ export function ChaptersManager() {
           </p>
         </div>
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div className="relative w-full md:max-w-[560px]">
-            <input
-              type="search"
-              value={searchText}
-              onChange={(event) => setSearchText(event.target.value)}
-              placeholder="Tìm chương, tiêu đề, nội dung..."
-              className="w-full rounded-xl border border-border bg-white px-4 py-2 pr-10 text-sm text-foreground shadow-sm outline-none transition placeholder:text-muted-foreground focus:border-accent"
-            />
-            {searchText.trim().length > 0 ? (
-              <button
-                type="button"
-                onClick={() => setSearchText("")}
-                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg px-2 py-1 text-xs font-semibold text-muted-foreground transition hover:bg-surface-muted hover:text-foreground"
-                aria-label="Xóa tìm kiếm"
-              >
-                ×
-              </button>
-            ) : null}
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex w-full flex-col gap-2 md:flex-row md:items-center">
+            <div className="relative w-full md:max-w-[560px]">
+              <input
+                type="search"
+                value={searchText}
+                onChange={(event) => setSearchText(event.target.value)}
+                placeholder="Tìm chương, tiêu đề, nội dung..."
+                className="w-full rounded-xl border border-border bg-white px-4 py-2 pr-10 text-sm text-foreground shadow-sm outline-none transition placeholder:text-muted-foreground focus:border-accent"
+              />
+              {searchText.trim().length > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => setSearchText("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg px-2 py-1 text-xs font-semibold text-muted-foreground transition hover:bg-surface-muted hover:text-foreground"
+                  aria-label="Xóa tìm kiếm"
+                >
+                  ×
+                </button>
+              ) : null}
+            </div>
             <button
               type="button"
               disabled={isReloading || !selectedStoryId}
@@ -575,6 +581,13 @@ export function ChaptersManager() {
               <span className="rounded-full bg-surface-muted px-2 py-0.5 text-xs text-muted-foreground">
                 {activeFilterCount}
               </span>
+            </button>
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="inline-flex items-center rounded-lg border border-border bg-white px-4 py-2.5 text-sm font-medium text-foreground transition hover:bg-surface-muted"
+            >
+              Xóa lọc
             </button>
             <button
               type="button"

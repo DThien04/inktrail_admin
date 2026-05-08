@@ -14,13 +14,13 @@ import {
 import {
   createStory,
   deleteStory,
-  getGenres,
   getMyStories,
   getStoryDetail,
+  getTagOptions,
   updateStory,
   updateStoryStatus,
 } from "@/features/stories/services/stories-service";
-import type { GenreOption, StoryListItem, StoryStatus, UpdateStoryPayload } from "@/features/stories/types";
+import type { StoryListItem, StoryStatus, TagOption, UpdateStoryPayload } from "@/features/stories/types";
 
 type StorySortKey = "title" | "status" | "updatedAt" | "readCount" | "rating";
 type SortDirection = "asc" | "desc";
@@ -54,8 +54,8 @@ function buildEditFormFromStory(story: Awaited<ReturnType<typeof getStoryDetail>
     slug: story.slug,
     description: story.description || "",
     coverFile: null,
-    genreIds: story.genres.map((item) => item.id),
-    tagNames: story.tags.map((item) => item.name),
+    tagIds: story.tags.map((item) => item.id),
+    tagNames: [],
   };
 }
 
@@ -113,7 +113,7 @@ function StoryTableHeaderButton({
 
 export function MyStoriesTable() {
   const [stories, setStories] = useState<StoryListItem[]>([]);
-  const [genres, setGenres] = useState<GenreOption[]>([]);
+  const [tagOptions, setTagOptions] = useState<TagOption[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isReloading, setIsReloading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -157,19 +157,19 @@ export function MyStoriesTable() {
       }
     }
 
-    async function loadGenres() {
+    async function loadTags() {
       try {
-        const rows = await getGenres();
+        const rows = await getTagOptions();
         if (!isMounted) return;
-        setGenres(rows);
+        setTagOptions(rows);
       } catch {
         if (!isMounted) return;
-        setGenres([]);
+        setTagOptions([]);
       }
     }
 
     void loadStories();
-    void loadGenres();
+    void loadTags();
     return () => {
       isMounted = false;
     };
@@ -547,7 +547,7 @@ export function MyStoriesTable() {
             <StoryCreatePanel
               isCreating={isCreating}
               submitError={createError}
-              genres={genres}
+              tags={tagOptions}
               onCreate={handleCreateStory}
               onClose={() => {
                 setModalMode(null);

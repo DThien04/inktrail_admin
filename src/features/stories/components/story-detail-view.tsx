@@ -5,20 +5,20 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import {
-  getGenres,
+  getTagOptions,
   getStoryDetail,
   updateStory,
 } from "@/features/stories/services/stories-service";
 import type {
-  GenreOption,
+  TagOption,
   StoryDetail,
   StoryStatus,
   UpdateStoryPayload,
 } from "@/features/stories/types";
 
 const STATUS_LABELS: Record<StoryStatus, string> = {
-  draft: "Báº£n nhÃ¡p",
-  published: "Äang phÃ¡t hÃ nh",
+  draft: "Bản nháp",
+  published: "Đang phát hành",
 };
 
 function formatDate(value: string) {
@@ -44,8 +44,8 @@ function buildInitialForm(story: StoryDetail): UpdateStoryPayload {
     slug: story.slug,
     description: story.description || "",
     coverFile: null,
-    genreIds: story.genres.map((genre) => genre.id),
-    tagNames: story.tags.map((tag) => tag.name),
+    tagIds: story.tags.map((tag) => tag.id),
+    tagNames: [],
   };
 }
 
@@ -91,7 +91,7 @@ async function getAspectRatioWarning(
 export function StoryDetailView({ slug }: { slug: string }) {
   const router = useRouter();
   const [story, setStory] = useState<StoryDetail | null>(null);
-  const [genres, setGenres] = useState<GenreOption[]>([]);
+  const [tagOptions, setTagOptions] = useState<TagOption[]>([]);
   const [form, setForm] = useState<UpdateStoryPayload | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -108,15 +108,15 @@ export function StoryDetailView({ slug }: { slug: string }) {
       setErrorMessage("");
 
       try {
-        const [storyResponse, genresResponse] = await Promise.all([
+        const [storyResponse, tagsResponse] = await Promise.all([
           getStoryDetail(slug),
-          getGenres(),
+          getTagOptions(),
         ]);
 
         if (!isMounted) return;
 
         setStory(storyResponse);
-        setGenres(genresResponse);
+        setTagOptions(tagsResponse);
         setForm(buildInitialForm(storyResponse));
       } catch (error) {
         if (!isMounted) return;
@@ -126,7 +126,7 @@ export function StoryDetailView({ slug }: { slug: string }) {
         setErrorMessage(
           error instanceof Error && error.message
             ? error.message
-            : "KhÃ´ng thá»ƒ táº£i chi tiáº¿t truyá»‡n.",
+            : "Không thể tải chi tiết truyện.",
         );
       } finally {
         if (isMounted) {
@@ -141,11 +141,6 @@ export function StoryDetailView({ slug }: { slug: string }) {
       isMounted = false;
     };
   }, [slug]);
-
-  const genresText = useMemo(() => {
-    if (!story?.genres.length) return "ChÆ°a gÃ¡n thá»ƒ loáº¡i";
-    return story.genres.map((genre) => genre.name).join(", ");
-  }, [story]);
 
   const tagsText = useMemo(() => {
     if (!story?.tags.length) return "Chua gan tag";
@@ -182,7 +177,7 @@ export function StoryDetailView({ slug }: { slug: string }) {
       setForm(buildInitialForm(updatedStory));
       setIsEditing(false);
       setCoverRatioWarning("");
-      setSaveMessage("ÄÃ£ cáº­p nháº­t truyá»‡n thÃ nh cÃ´ng.");
+      setSaveMessage("Đã cập nhật truyện thành công.");
       if (updatedStory.slug !== slug) {
         router.replace(`/stories/${updatedStory.slug}`);
       }
@@ -190,7 +185,7 @@ export function StoryDetailView({ slug }: { slug: string }) {
       setErrorMessage(
         error instanceof Error && error.message
           ? error.message
-          : "KhÃ´ng thá»ƒ cáº­p nháº­t truyá»‡n.",
+          : "Không thể cập nhật truyện.",
       );
     } finally {
       setIsSaving(false);
@@ -213,10 +208,10 @@ export function StoryDetailView({ slug }: { slug: string }) {
           href="/stories"
           className="inline-flex items-center rounded-lg border border-border px-3 py-2 text-sm text-foreground transition hover:bg-surface-muted"
         >
-          Quay láº¡i danh sÃ¡ch truyá»‡n
+          Quay lại danh sách truyện
         </Link>
         <div className="data-card px-6 py-10 text-sm text-muted-foreground">
-          Äang táº£i chi tiáº¿t truyá»‡n...
+          Đang tải chi tiết truyện...
         </div>
       </div>
     );
@@ -229,7 +224,7 @@ export function StoryDetailView({ slug }: { slug: string }) {
           href="/stories"
           className="inline-flex items-center rounded-lg border border-border px-3 py-2 text-sm text-foreground transition hover:bg-surface-muted"
         >
-          Quay láº¡i danh sÃ¡ch truyá»‡n
+          Quay lại danh sách truyện
         </Link>
         <div className="data-card px-6 py-10 text-sm text-accent-strong">
           {errorMessage}
@@ -245,10 +240,10 @@ export function StoryDetailView({ slug }: { slug: string }) {
           href="/stories"
           className="inline-flex items-center rounded-lg border border-border px-3 py-2 text-sm text-foreground transition hover:bg-surface-muted"
         >
-          Quay láº¡i danh sÃ¡ch truyá»‡n
+          Quay lại danh sách truyện
         </Link>
         <div className="data-card px-6 py-10 text-sm text-accent-strong">
-          KhÃ´ng tÃ¬m tháº¥y truyá»‡n.
+          Không tìm thấy truyện.
         </div>
       </div>
     );
@@ -261,7 +256,7 @@ export function StoryDetailView({ slug }: { slug: string }) {
           href="/stories"
           className="inline-flex items-center rounded-lg border border-border px-3 py-2 text-sm text-foreground transition hover:bg-surface-muted"
         >
-          Quay láº¡i danh sÃ¡ch truyá»‡n
+          Quay lại danh sách truyện
         </Link>
 
         <div className="flex flex-wrap gap-2">
@@ -269,7 +264,7 @@ export function StoryDetailView({ slug }: { slug: string }) {
             href={`/chapters?storyId=${story.id}`}
             className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground transition hover:bg-surface-muted"
           >
-            Quáº£n lÃ½ chÆ°Æ¡ng
+            Quản lý chương
           </Link>
           {isEditing ? (
             <>
@@ -278,7 +273,7 @@ export function StoryDetailView({ slug }: { slug: string }) {
                 onClick={resetForm}
                 className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground transition hover:bg-surface-muted"
               >
-                Há»§y
+                Hủy
               </button>
               <button
                 type="submit"
@@ -286,7 +281,7 @@ export function StoryDetailView({ slug }: { slug: string }) {
                 disabled={isSaving}
                 className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-70"
               >
-                {isSaving ? "Äang lÆ°u..." : "LÆ°u thay Ä‘á»•i"}
+                {isSaving ? "Đang lưu..." : "Lưu thay đổi"}
               </button>
             </>
           ) : (
@@ -294,7 +289,7 @@ export function StoryDetailView({ slug }: { slug: string }) {
               type="button"
               onClick={() => {
                 if (story.status === "published") {
-                  setErrorMessage("Truyá»‡n Ä‘Ã£ xuáº¥t báº£n. HÃ£y thu há»“i vá» báº£n nhÃ¡p trÆ°á»›c khi chá»‰nh sá»­a.");
+                  setErrorMessage("Truyện đã xuất bản. Hãy thu hồi về bản nháp trước khi chỉnh sửa.");
                   setSaveMessage("");
                   return;
                 }
@@ -304,7 +299,7 @@ export function StoryDetailView({ slug }: { slug: string }) {
               }}
               className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition hover:bg-accent-strong"
             >
-              Chá»‰nh sá»­a truyá»‡n
+              Chỉnh sửa truyện
             </button>
           )}
         </div>
@@ -333,7 +328,7 @@ export function StoryDetailView({ slug }: { slug: string }) {
               />
             ) : (
               <div className="flex min-h-[280px] items-center justify-center px-6 text-center text-sm text-muted-foreground">
-                ChÆ°a cÃ³ áº£nh bÃ¬a
+                Chưa có ảnh bìa
               </div>
             )}
           </div>
@@ -350,14 +345,14 @@ export function StoryDetailView({ slug }: { slug: string }) {
                 <p className="mt-2 text-sm text-muted-foreground">Slug: /{story.slug}</p>
               </div>
               <p className="text-sm leading-7 text-muted-foreground">
-                {story.description || "Truyá»‡n nÃ y chÆ°a cÃ³ mÃ´ táº£."}
+                {story.description || "Truyện này chưa có mô tả."}
               </p>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               <div className="rounded-xl border border-border bg-surface-muted px-4 py-4">
                 <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
-                  TÃ¡c giáº£
+                  Tác giả
                 </p>
                 <p className="mt-2 text-base font-medium text-foreground">
                   {story.author.displayName}
@@ -367,7 +362,7 @@ export function StoryDetailView({ slug }: { slug: string }) {
 
               <div className="rounded-xl border border-border bg-surface-muted px-4 py-4">
                 <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
-                  Sá»‘ chÆ°Æ¡ng
+                  Số chương
                 </p>
                 <p className="mt-2 text-base font-medium text-foreground">
                   {story.chapterCount}
@@ -376,7 +371,7 @@ export function StoryDetailView({ slug }: { slug: string }) {
 
               <div className="rounded-xl border border-border bg-surface-muted px-4 py-4">
                 <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
-                  LÆ°á»£t Ä‘á»c
+                  Lượt đọc
                 </p>
                 <p className="mt-2 text-base font-medium text-foreground">
                   {formatReadCount(story.readCount)}
@@ -385,7 +380,7 @@ export function StoryDetailView({ slug }: { slug: string }) {
 
               <div className="rounded-xl border border-border bg-surface-muted px-4 py-4">
                 <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
-                  Cáº­p nháº­t
+                  Cập nhật
                 </p>
                 <p className="mt-2 text-base font-medium text-foreground">
                   {formatDate(story.updatedAt)}
@@ -403,14 +398,14 @@ export function StoryDetailView({ slug }: { slug: string }) {
           className="data-card space-y-5 p-6"
         >
           <div>
-            <h2 className="text-lg font-semibold text-foreground">Chá»‰nh sá»­a truyá»‡n</h2>
+            <h2 className="text-lg font-semibold text-foreground">Chỉnh sửa truyện</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Cáº­p nháº­t thÃ´ng tin hiá»ƒn thá»‹, tráº¡ng thÃ¡i vÃ  áº£nh bÃ¬a cá»§a truyá»‡n.
+              Cập nhật thông tin hiển thị, trạng thái và ảnh bìa của truyện.
             </p>
           </div>
 
           <label className="space-y-2 text-sm">
-            <span className="font-medium text-foreground">Tags</span>
+            <span className="font-medium text-foreground">Thêm tag mới</span>
             <textarea
               rows={3}
               value={form.tagNames.join(", ")}
@@ -430,9 +425,49 @@ export function StoryDetailView({ slug }: { slug: string }) {
             />
           </label>
 
+          <div className="space-y-2 text-sm">
+            <span className="font-medium text-foreground">Tag có sẵn</span>
+            <div className="rounded-lg border border-border bg-white px-3 py-3">
+              <div className="flex flex-wrap gap-2">
+                {tagOptions.map((tag) => {
+                  const checked = form.tagIds.includes(tag.id);
+
+                  return (
+                    <button
+                      key={tag.id}
+                      type="button"
+                      disabled={!isEditing || isSaving || !tag.isActive}
+                      onClick={() =>
+                        setForm((current) => {
+                          if (!current) return current;
+
+                          const nextTagIds = checked
+                            ? current.tagIds.filter((id) => id !== tag.id)
+                            : [...current.tagIds, tag.id];
+
+                          return {
+                            ...current,
+                            tagIds: [...new Set(nextTagIds)],
+                          };
+                        })
+                      }
+                      className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${
+                        checked
+                          ? "border-accent bg-accent text-white"
+                          : "border-border bg-surface-muted text-foreground"
+                      } ${!tag.isActive ? "cursor-not-allowed opacity-50" : ""}`}
+                    >
+                      #{tag.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
           <div className="grid gap-4 md:grid-cols-2">
             <label className="space-y-2 text-sm">
-              <span className="font-medium text-foreground">TÃªn truyá»‡n</span>
+              <span className="font-medium text-foreground">Tên truyện</span>
               <input
                 value={form.title}
                 disabled={!isEditing || isSaving}
@@ -471,7 +506,7 @@ export function StoryDetailView({ slug }: { slug: string }) {
           </div>
 
           <div className="space-y-2 text-sm">
-            <span className="font-medium text-foreground">áº¢nh bÃ¬a</span>
+            <span className="font-medium text-foreground">Ảnh bìa</span>
             <div className="space-y-3 rounded-xl border border-border bg-surface-muted p-3">
               <div className="flex flex-wrap gap-2">
                 <label className="rounded-lg border border-border px-3 py-2 text-sm text-foreground transition hover:bg-white">
@@ -497,7 +532,7 @@ export function StoryDetailView({ slug }: { slug: string }) {
                       event.currentTarget.value = "";
                     }}
                   />
-                  Chá»n áº£nh bÃ¬a
+                  Chọn ảnh bìa
                 </label>
 
                 {coverPreview ? (
@@ -507,7 +542,7 @@ export function StoryDetailView({ slug }: { slug: string }) {
                     rel="noreferrer"
                     className="rounded-lg border border-border px-3 py-2 text-sm text-foreground transition hover:bg-white"
                   >
-                    Má»Ÿ áº£nh bÃ¬a
+                    Mở ảnh bìa
                   </a>
                 ) : null}
 
@@ -527,22 +562,22 @@ export function StoryDetailView({ slug }: { slug: string }) {
                   }}
                   className="rounded-lg border border-border px-3 py-2 text-sm text-foreground transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Bá» áº£nh Ä‘Ã£ chá»n
+                  Bỏ ảnh đã chọn
                 </button>
               </div>
 
               {form.coverFile ? (
                 <p className="text-sm text-muted-foreground">
-                  áº¢nh sáº½ upload khi lÆ°u: {form.coverFile.name}
+                  Ảnh sẽ upload khi lưu: {form.coverFile.name}
                 </p>
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  ChÆ°a chá»n áº£nh má»›i. Náº¿u lÆ°u lÃºc nÃ y, há»‡ thá»‘ng sáº½ giá»¯ nguyÃªn áº£nh bÃ¬a hiá»‡n táº¡i.
+                  Chưa chọn ảnh mới. Nếu lưu lúc này, hệ thống sẽ giữ nguyên ảnh bìa hiện tại.
                 </p>
               )}
 
               <p className="text-xs text-muted-foreground">
-                Khuyáº¿n cÃ¡o: dÃ¹ng áº£nh bÃ¬a dá»c tá»· lá»‡ 2:3, kÃ­ch thÆ°á»›c tá»‘t nháº¥t 900 x 1350 px.
+                Khuyến cáo: dùng ảnh bìa dọc tỷ lệ 2:3, kích thước tốt nhất 900 x 1350 px.
               </p>
               {coverRatioWarning ? (
                 <p className="text-xs text-amber-700">{coverRatioWarning}</p>
@@ -551,7 +586,7 @@ export function StoryDetailView({ slug }: { slug: string }) {
           </div>
 
           <label className="space-y-2 text-sm">
-            <span className="font-medium text-foreground">MÃ´ táº£</span>
+            <span className="font-medium text-foreground">Mô tả</span>
             <textarea
               rows={6}
               value={form.description}
@@ -569,81 +604,34 @@ export function StoryDetailView({ slug }: { slug: string }) {
               className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-accent disabled:bg-surface-muted"
             />
           </label>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2 text-sm">
-              <span className="font-medium text-foreground">Thá»ƒ loáº¡i</span>
-              <div className="rounded-lg border border-border bg-white px-3 py-3">
-                <div className="grid gap-2 md:grid-cols-2">
-                  {genres.map((genre) => {
-                    const checked = form.genreIds.includes(genre.id);
-
-                    return (
-                      <label
-                        key={genre.id}
-                        className={`flex items-center gap-2 rounded-md px-2 py-1 ${
-                          genre.isActive ? "text-foreground" : "text-muted-foreground"
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          disabled={!isEditing || isSaving || !genre.isActive}
-                          onChange={(event) =>
-                            setForm((current) => {
-                              if (!current) return current;
-
-                              const nextGenreIds = event.target.checked
-                                ? [...current.genreIds, genre.id]
-                                : current.genreIds.filter((id) => id !== genre.id);
-
-                              return {
-                                ...current,
-                                genreIds: [...new Set(nextGenreIds)],
-                              };
-                            })
-                          }
-                        />
-                        <span>{genre.name}</span>
-                      </label>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </div>
         </form>
 
         <div className="data-card p-6">
-          <h2 className="text-lg font-semibold text-foreground">ThÃ´ng tin hiá»‡n táº¡i</h2>
+          <h2 className="text-lg font-semibold text-foreground">Thông tin hiện tại</h2>
 
           <dl className="mt-4 space-y-4 text-sm">
-            <div>
-              <dt className="text-muted-foreground">Thá»ƒ loáº¡i</dt>
-              <dd className="mt-1 text-foreground">{genresText}</dd>
-            </div>
             <div>
               <dt className="text-muted-foreground">Tags</dt>
               <dd className="mt-1 text-foreground">{tagsText}</dd>
             </div>
             <div>
-              <dt className="text-muted-foreground">MÃ£ truyá»‡n</dt>
+              <dt className="text-muted-foreground">Mã truyện</dt>
               <dd className="mt-1 break-all text-foreground">{story.id}</dd>
             </div>
             <div>
-              <dt className="text-muted-foreground">Vai trÃ² tÃ¡c giáº£</dt>
+              <dt className="text-muted-foreground">Vai trò tác giả</dt>
               <dd className="mt-1 text-foreground">{story.author.role}</dd>
             </div>
             <div>
-              <dt className="text-muted-foreground">áº¢nh bÃ¬a hiá»‡n táº¡i</dt>
+              <dt className="text-muted-foreground">Ảnh bìa hiện tại</dt>
               <dd className="mt-1 text-foreground">
-                {story.coverUrl ? "ÄÃ£ cÃ³ áº£nh bÃ¬a" : "ChÆ°a cÃ³ áº£nh bÃ¬a"}
+                {story.coverUrl ? "Đã có ảnh bìa" : "Chưa có ảnh bìa"}
               </dd>
             </div>
             <div>
-              <dt className="text-muted-foreground">MÃ´ táº£ truyá»‡n</dt>
+              <dt className="text-muted-foreground">Mô tả truyện</dt>
               <dd className="mt-1 whitespace-pre-wrap text-foreground">
-                {story.description || "Truyá»‡n nÃ y chÆ°a cÃ³ mÃ´ táº£ Ä‘á»ƒ hiá»ƒn thá»‹."}
+                {story.description || "Truyện này chưa có mô tả để hiển thị."}
               </dd>
             </div>
           </dl>

@@ -73,10 +73,9 @@ export type AdminReportListItem = {
     content?: string | null;
     contentPreview?: string | null;
     contentTruncated?: boolean;
-    genres?: Array<{
+    tags?: Array<{
       id: string;
       name: string;
-      slug: string;
     }>;
     story?: {
       id: string;

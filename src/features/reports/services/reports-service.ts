@@ -70,10 +70,9 @@ type ApiAdminReportListResponse = {
       content?: string | null;
       content_preview?: string | null;
       content_truncated?: boolean;
-      genres?: Array<{
+      tags?: Array<{
         id: string;
         name: string;
-        slug: string;
       }>;
       story?: {
         id: string;
@@ -159,7 +158,7 @@ function mapReportItem(
           content: item.target.content ?? null,
           contentPreview: item.target.content_preview ?? null,
           contentTruncated: Boolean(item.target.content_truncated),
-          genres: item.target.genres ?? [],
+          tags: item.target.tags ?? [],
           story: item.target.story
             ? {
                 id: item.target.story.id,

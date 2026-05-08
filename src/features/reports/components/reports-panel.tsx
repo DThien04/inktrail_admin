@@ -1315,26 +1315,26 @@ export function ReportsPanel() {
         </div>
 
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div className="relative w-full md:max-w-md">
-            <input
-              type="search"
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder="Tìm báo cáo, người dùng, nội dung..."
-              className="w-full rounded-xl border border-border bg-white px-4 py-2 pr-10 text-sm text-foreground shadow-sm outline-none transition placeholder:text-muted-foreground focus:border-accent"
-            />
-            {searchQuery.trim().length > 0 ? (
-              <button
-                type="button"
-                onClick={() => setSearchQuery("")}
-                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg px-2 py-1 text-xs font-semibold text-muted-foreground transition hover:bg-surface-muted hover:text-foreground"
-                aria-label="Xóa tìm kiếm"
-              >
-                ×
-              </button>
-            ) : null}
-          </div>
-          <div className="flex items-center justify-end gap-2">
+          <div className="flex w-full flex-col gap-2 md:flex-row md:items-center">
+            <div className="relative w-full md:max-w-md">
+              <input
+                type="search"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="Tìm báo cáo, người dùng, nội dung..."
+                className="w-full rounded-xl border border-border bg-white px-4 py-2 pr-10 text-sm text-foreground shadow-sm outline-none transition placeholder:text-muted-foreground focus:border-accent"
+              />
+              {searchQuery.trim().length > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg px-2 py-1 text-xs font-semibold text-muted-foreground transition hover:bg-surface-muted hover:text-foreground"
+                  aria-label="Xóa tìm kiếm"
+                >
+                  ×
+                </button>
+              ) : null}
+            </div>
             <button
               type="button"
               disabled={isReloading}
@@ -1374,10 +1374,17 @@ export function ReportsPanel() {
               }}
               className="inline-flex items-center gap-2 rounded-xl border border-border bg-white px-4 py-2 text-sm font-semibold text-foreground shadow-sm transition hover:bg-surface-muted"
             >
-              {"B\u1ed9 l\u1ecdc"}
+              {"Bộ lọc"}
               <span className="rounded-full bg-surface-muted px-2 py-0.5 text-xs text-muted-foreground">
                 {activeFilterCount}
               </span>
+            </button>
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="inline-flex items-center rounded-xl border border-border bg-white px-4 py-2 text-sm font-semibold text-foreground shadow-sm transition hover:bg-surface-muted"
+            >
+              {"Xóa lọc"}
             </button>
           </div>
         </div>
@@ -1391,9 +1398,9 @@ export function ReportsPanel() {
         >
           <div className="mb-5 flex flex-col gap-3 border-b border-border pb-4 md:flex-row md:items-start md:justify-between">
             <div>
-              <p className="text-sm font-semibold text-foreground">{"B\u1ed9 l\u1ecdc b\u00e1o c\u00e1o"}</p>
+              <p className="text-sm font-semibold text-foreground">{"Bộ lọc báo cáo"}</p>
               <p className="mt-1 text-xs text-muted-foreground">
-                {"L\u1ecdc nhanh theo lo\u1ea1i, tr\u1ea1ng th\u00e1i, kh\u00e1ng ngh\u1ecb v\u00e0 m\u1ee9c \u0111\u1ed9 \u01b0u ti\u00ean."}
+                {"Lọc nhanh theo loại, trạng thái, kháng nghị và mức độ ưu tiên."}
               </p>
             </div>
           </div>
@@ -1433,7 +1440,7 @@ export function ReportsPanel() {
 
             <div className="space-y-2 rounded-xl border border-border bg-surface-muted p-4">
               <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                {"Tr\u1ea1ng th\u00e1i"}
+                {"Trạng thái"}
               </p>
               {(["pending", "resolved"] as const).map((workflowStatus) => {
                 const checked = draftStatuses.includes(workflowStatus);
@@ -1458,7 +1465,7 @@ export function ReportsPanel() {
 
             <div className="space-y-2 rounded-xl border border-border bg-surface-muted p-4">
               <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                {"Kh\u00e1ng ngh\u1ecb"}
+                {"Kháng nghị"}
               </p>
               {(["pending", "accepted", "rejected"] as const).map(
                 (appealStatus) => {
@@ -1483,7 +1490,7 @@ export function ReportsPanel() {
 
             <div className="space-y-2 rounded-xl border border-border bg-surface-muted p-4">
               <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                {"\u01afu ti\u00ean"}
+                {"Ưu tiên"}
               </p>
               {(["low", "medium", "high", "critical"] as const).map((priority) => {
                 const checked = draftPriorities.includes(priority);
@@ -1512,14 +1519,14 @@ export function ReportsPanel() {
                 onClick={resetFilters}
                 className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-foreground transition hover:bg-surface-muted"
               >
-                {"X\u00f3a l\u1ecdc"}
+                {"Xóa lọc"}
               </button>
               <button
                 type="button"
                 onClick={() => setIsFilterOpen(false)}
                 className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-foreground transition hover:bg-surface-muted"
               >
-                {"\u0110\u00f3ng"}
+                {"Đóng"}
               </button>
               <button
                 type="button"
@@ -1527,7 +1534,7 @@ export function ReportsPanel() {
                 className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90"
                 style={{ backgroundColor: "var(--accent)" }}
               >
-                {"X\u00e1c nh\u1eadn"}
+                {"Xác nhận"}
               </button>
             </div>
           </div>

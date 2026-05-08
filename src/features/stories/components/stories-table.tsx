@@ -15,11 +15,11 @@ import {
 import {
   createStory,
   getAdminStories,
-  getGenres,
   getStoryDetail,
+  getTagOptions,
   updateStory,
 } from "@/features/stories/services/stories-service";
-import type { GenreOption, StoryListItem, StoryStatus, UpdateStoryPayload } from "@/features/stories/types";
+import type { StoryListItem, StoryStatus, TagOption, UpdateStoryPayload } from "@/features/stories/types";
 
 type StorySortKey = "title" | "status" | "updatedAt" | "readCount" | "rating";
 type SortDirection = "asc" | "desc";
@@ -50,8 +50,8 @@ function buildEditFormFromStory(story: Awaited<ReturnType<typeof getStoryDetail>
     slug: story.slug,
     description: story.description || "",
     coverFile: null,
-    genreIds: story.genres.map((item) => item.id),
-    tagNames: story.tags.map((item) => item.name),
+    tagIds: story.tags.map((item) => item.id),
+    tagNames: [],
   };
 }
 
@@ -103,7 +103,7 @@ function StoryTableHeaderButton({
 export function StoriesTable() {
   const router = useRouter();
   const [stories, setStories] = useState<StoryListItem[]>([]);
-  const [genres, setGenres] = useState<GenreOption[]>([]);
+  const [tagOptions, setTagOptions] = useState<TagOption[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isReloading, setIsReloading] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
@@ -132,13 +132,13 @@ export function StoriesTable() {
       setIsLoading(true);
       setErrorMessage("");
       try {
-        const [storyRows, genreRows] = await Promise.all([
+        const [storyRows, tagRows] = await Promise.all([
           getAdminStories({ status: "all" }),
-          getGenres(),
+          getTagOptions(),
         ]);
         if (!isMounted) return;
         setStories(storyRows);
-        setGenres(genreRows);
+        setTagOptions(tagRows);
       } catch (error) {
         if (!isMounted) return;
         setStories([]);
@@ -279,6 +279,13 @@ export function StoriesTable() {
     setIsFilterOpen(false);
   }
 
+  function resetFilters() {
+    setSearchText("");
+    setStatusFilter("all");
+    setDraftStatusFilter("all");
+    setIsFilterOpen(false);
+  }
+
   const activeFilterCount = statusFilter === "all" ? 0 : 1;
 
   return (
@@ -294,15 +301,16 @@ export function StoriesTable() {
 
       <section className="space-y-3">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div className="relative w-full md:max-w-[560px]">
-            <input type="search" value={searchText} onChange={(event) => setSearchText(event.target.value)} placeholder="Tìm truyện, tác giả, slug..." className="w-full rounded-xl border border-border bg-white px-4 py-2 pr-10 text-sm text-foreground shadow-sm outline-none transition placeholder:text-muted-foreground focus:border-accent" />
-            {searchText.trim().length > 0 ? <button type="button" onClick={() => setSearchText("")} className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg px-2 py-1 text-xs font-semibold text-muted-foreground transition hover:bg-surface-muted hover:text-foreground">×</button> : null}
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex w-full flex-col gap-2 md:flex-row md:items-center">
+            <div className="relative w-full md:max-w-[560px]">
+              <input type="search" value={searchText} onChange={(event) => setSearchText(event.target.value)} placeholder="Tìm truyện, tác giả, slug..." className="w-full rounded-xl border border-border bg-white px-4 py-2 pr-10 text-sm text-foreground shadow-sm outline-none transition placeholder:text-muted-foreground focus:border-accent" />
+              {searchText.trim().length > 0 ? <button type="button" onClick={() => setSearchText("")} className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg px-2 py-1 text-xs font-semibold text-muted-foreground transition hover:bg-surface-muted hover:text-foreground">×</button> : null}
+            </div>
             <button type="button" disabled={isReloading || isLoading} onClick={() => void refreshStories({ reloading: true })} className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-white text-foreground shadow-sm transition hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-60">
               <svg viewBox="0 0 24 24" className={`h-5 w-5 ${isReloading ? "animate-[spin_0.55s_linear_infinite]" : ""}`} fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M21 2v6h-6" /><path d="M3 12a9 9 0 0 1 15-6.7L21 8" /><path d="M3 22v-6h6" /><path d="M21 12a9 9 0 0 1-15 6.7L3 16" /></svg>
             </button>
             <button type="button" onClick={() => { setDraftStatusFilter(statusFilter); setIsFilterOpen(true); }} className="inline-flex items-center gap-2 rounded-lg border border-border bg-white px-4 py-2.5 text-sm font-medium text-foreground transition hover:bg-surface-muted">Bộ lọc <span className="rounded-full bg-surface-muted px-2 py-0.5 text-xs text-muted-foreground">{activeFilterCount}</span></button>
+            <button type="button" onClick={resetFilters} className="inline-flex items-center rounded-lg border border-border bg-white px-4 py-2.5 text-sm font-medium text-foreground transition hover:bg-surface-muted">Xóa lọc</button>
             <button type="button" onClick={() => { setCreateError(""); setModalMode("create"); }} className="rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white transition hover:bg-accent-strong">Tạo truyện</button>
           </div>
         </div>
@@ -388,7 +396,7 @@ export function StoriesTable() {
       {modalMode === "create" ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4">
           <div className="max-h-[92vh] w-full max-w-6xl overflow-auto">
-            <StoryCreatePanel isCreating={isCreating} submitError={createError} genres={genres} onCreate={handleCreateStory} onClose={() => { setModalMode(null); setCreateError(""); }} />
+            <StoryCreatePanel isCreating={isCreating} submitError={createError} tags={tagOptions} onCreate={handleCreateStory} onClose={() => { setModalMode(null); setCreateError(""); }} />
           </div>
         </div>
       ) : null}

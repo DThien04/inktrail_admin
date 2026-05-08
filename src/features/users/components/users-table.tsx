@@ -159,6 +159,13 @@ export function UsersTable() {
     setIsFilterOpen(false);
   }
 
+  function resetFilters() {
+    setSearchText("");
+    setRoleFilter("all");
+    setDraftRoleFilter("all");
+    setIsFilterOpen(false);
+  }
+
   const activeFilterCount = roleFilter === "all" ? 0 : 1;
 
   return (
@@ -171,25 +178,25 @@ export function UsersTable() {
 
       <section className="space-y-3">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div className="relative w-full md:max-w-[560px]">
-            <input
-              type="search"
-              value={searchText}
-              onChange={(event) => setSearchText(event.target.value)}
-              placeholder="Tìm tên, email, vai trò..."
-              className="w-full rounded-xl border border-border bg-white px-4 py-2 pr-10 text-sm text-foreground shadow-sm outline-none transition placeholder:text-muted-foreground focus:border-accent"
-            />
-            {searchText.trim().length > 0 ? (
-              <button
-                type="button"
-                onClick={() => setSearchText("")}
-                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg px-2 py-1 text-xs font-semibold text-muted-foreground transition hover:bg-surface-muted hover:text-foreground"
-              >
-                ×
-              </button>
-            ) : null}
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex w-full flex-col gap-2 md:flex-row md:items-center">
+            <div className="relative w-full md:max-w-[560px]">
+              <input
+                type="search"
+                value={searchText}
+                onChange={(event) => setSearchText(event.target.value)}
+                placeholder="Tìm tên, email, vai trò..."
+                className="w-full rounded-xl border border-border bg-white px-4 py-2 pr-10 text-sm text-foreground shadow-sm outline-none transition placeholder:text-muted-foreground focus:border-accent"
+              />
+              {searchText.trim().length > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => setSearchText("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg px-2 py-1 text-xs font-semibold text-muted-foreground transition hover:bg-surface-muted hover:text-foreground"
+                >
+                  ×
+                </button>
+              ) : null}
+            </div>
             <button
               type="button"
               disabled={isReloading || isLoading}
@@ -214,6 +221,13 @@ export function UsersTable() {
             >
               Bộ lọc
               <span className="rounded-full bg-surface-muted px-2 py-0.5 text-xs text-muted-foreground">{activeFilterCount}</span>
+            </button>
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="inline-flex items-center rounded-lg border border-border bg-white px-4 py-2.5 text-sm font-medium text-foreground transition hover:bg-surface-muted"
+            >
+              Xóa lọc
             </button>
           </div>
         </div>
@@ -240,7 +254,6 @@ export function UsersTable() {
                   <tr key={user.id} className="border-t border-border/70">
                     <td className="px-4 py-3">
                       <p className="font-semibold text-foreground">{user.displayName}</p>
-                      <p className="mt-0.5 text-xs text-muted-foreground">{user.id}</p>
                     </td>
                     <td className="px-4 py-3 text-foreground">{user.email}</td>
                     <td className="px-4 py-3">
@@ -272,7 +285,7 @@ export function UsersTable() {
       {isFilterOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4">
           <div className="w-full max-w-md rounded-xl border border-border bg-white p-5 shadow-sm">
-            <h3 className="text-lg font-semibold text-foreground">Bộ lọc ngÆ°á»i dÃ¹ng</h3>
+            <h3 className="text-lg font-semibold text-foreground">Bộ lọc người dùng</h3>
             <div className="mt-4">
               <label className="space-y-1.5 text-sm">
                 <span className="font-medium text-foreground">Vai trò</span>

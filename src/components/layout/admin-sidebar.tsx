@@ -14,8 +14,8 @@ type NavIconKey =
   | "dashboard"
   | "stories"
   | "reports"
-  | "genres"
   | "chapters"
+  | "tags"
   | "users";
 
 function NavIcon({ icon, active }: { icon: NavIconKey; active: boolean }) {
@@ -47,20 +47,18 @@ function NavIcon({ icon, active }: { icon: NavIconKey; active: boolean }) {
           <path d="M10 7.5v3.5M10 13.2h.01" strokeLinecap="round" />
         </svg>
       );
-    case "genres":
-      return (
-        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" className={common}>
-          <path d="M3.5 6.5h13M3.5 10h13M3.5 13.5h13" strokeLinecap="round" />
-          <circle cx="6" cy="6.5" r="0.9" fill="currentColor" />
-          <circle cx="9.5" cy="10" r="0.9" fill="currentColor" />
-          <circle cx="13" cy="13.5" r="0.9" fill="currentColor" />
-        </svg>
-      );
     case "chapters":
       return (
         <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" className={common}>
           <rect x="4" y="3.5" width="12" height="13" rx="2" />
           <path d="M7 7h6M7 10h6M7 13h4" strokeLinecap="round" />
+        </svg>
+      );
+    case "tags":
+      return (
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" className={common}>
+          <path d="M3.5 10.5V4.8c0-.7.6-1.3 1.3-1.3h5.7l6.2 6.2a1.9 1.9 0 0 1 0 2.7l-4.3 4.3a1.9 1.9 0 0 1-2.7 0L3.5 10.5Z" />
+          <circle cx="7" cy="6.8" r="1.2" />
         </svg>
       );
     case "users":
