@@ -1,17 +1,17 @@
 ﻿"use client";
 /* eslint-disable @next/next/no-img-element */
 
-import { useEffect, useMemo, useState } from "react";
-import type {
-  CreateStoryPayload,
-  TagOption,
-} from "@/features/stories/types";
+import { useEffect, useMemo, useState, type ChangeEvent } from "react";
+import type { CreateStoryPayload, TagOption } from "@/features/stories/types";
 
 type StoryCreatePanelProps = {
-  isCreating: boolean;
+  variant?: "create" | "edit";
+  isSubmitting: boolean;
   submitError: string;
   tags: TagOption[];
-  onCreate: (payload: CreateStoryPayload) => Promise<void>;
+  initialForm?: CreateStoryPayload;
+  existingCoverUrl?: string | null;
+  onSubmit: (payload: CreateStoryPayload) => Promise<void>;
   onClose: () => void;
 };
 
@@ -69,48 +69,72 @@ async function getAspectRatioWarning(file: File, expectedRatio: number, label: s
 }
 
 export function StoryCreatePanel({
-  isCreating,
+  variant = "create",
+  isSubmitting,
   submitError,
   tags,
-  onCreate,
+  initialForm,
+  existingCoverUrl = null,
+  onSubmit,
   onClose,
 }: StoryCreatePanelProps) {
-  const [form, setForm] = useState<CreateStoryPayload>(buildEmptyCreateForm);
+  const isEdit = variant === "edit";
+
+  const [form, setForm] = useState<CreateStoryPayload>(() =>
+    isEdit && initialForm ? { ...initialForm } : buildEmptyCreateForm(),
+  );
   const [coverRatioWarning, setCoverRatioWarning] = useState("");
   const [localError, setLocalError] = useState("");
 
-  const coverPreviewUrl = useMemo(() => {
+  const coverBlobUrl = useMemo(() => {
     if (!form.coverFile) return "";
     return URL.createObjectURL(form.coverFile);
   }, [form.coverFile]);
 
   useEffect(() => {
     return () => {
-      if (coverPreviewUrl.startsWith("blob:")) {
-        URL.revokeObjectURL(coverPreviewUrl);
+      if (coverBlobUrl.startsWith("blob:")) {
+        URL.revokeObjectURL(coverBlobUrl);
       }
     };
-  }, [coverPreviewUrl]);
+  }, [coverBlobUrl]);
 
-  async function handleSubmitCreate() {
+  async function handleCoverFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const inputElement = event.currentTarget;
+    const file = event.target.files?.[0] || null;
+    const warning = file ? await getAspectRatioWarning(file, 2 / 3, "bìa") : "";
+
+    setForm((current) => ({
+      ...current,
+      coverFile: file,
+    }));
+    setCoverRatioWarning(warning);
+    inputElement.value = "";
+  }
+
+  async function handleSubmit() {
     if (!form.title.trim()) {
       setLocalError("Hãy nhập tên truyện.");
       return;
     }
 
     setLocalError("");
-    await onCreate({
+    await onSubmit({
       ...form,
-      slug: form.slug.trim() || slugify(form.title),
+      slug: slugify(form.title),
     });
   }
 
   return (
-    <section className="data-card max-w-[1120px] overflow-hidden rounded-[30px] p-0">
+    <section className="data-card max-w-[1120px] overflow-hidden rounded-2xl p-0">
       <div className="border-b border-border px-6 py-5">
-        <h2 className="text-xl font-semibold text-foreground">Tạo truyện mới</h2>
+        <h2 className="text-xl font-semibold text-foreground">
+          {isEdit ? "Sửa truyện" : "Tạo truyện mới"}
+        </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Điền thông tin chính để tạo truyện. Chương sẽ được quản lý ở bước tiếp theo.
+          {isEdit
+            ? "Cập nhật thông tin truyện, ảnh bìa và tag."
+            : "Điền thông tin chính để tạo truyện. Chương sẽ được quản lý ở bước tiếp theo."}
         </p>
       </div>
 
@@ -122,18 +146,31 @@ export function StoryCreatePanel({
           </div>
         ) : null}
 
-        <div className="flex flex-col gap-6 xl:flex-row">
-          <aside className="w-full shrink-0 xl:w-[220px]">
-            <div className="space-y-3">
-              <div className="text-sm font-medium text-foreground">Ảnh bìa</div>
-              <div className="overflow-hidden rounded-[24px] border border-border bg-surface-muted">
-                <div className="relative aspect-[2/3] w-full">
-                  {coverPreviewUrl ? (
+        <div className="grid gap-6 xl:grid-cols-[220px_1fr] xl:items-stretch">
+          <aside className="w-full shrink-0">
+            <section className="flex h-full flex-col gap-3 rounded-2xl border border-border bg-white p-4">
+              <div className="flex-1 overflow-hidden rounded-xl border border-border bg-surface-muted">
+                <div className="relative h-full min-h-0 w-full">
+                  {coverBlobUrl ? (
                     <img
-                      src={coverPreviewUrl}
+                      src={coverBlobUrl}
                       alt="Xem trước ảnh bìa"
                       className="h-full w-full object-cover"
                     />
+                  ) : existingCoverUrl ? (
+                    <label className="relative block h-full cursor-pointer">
+                      <img
+                        src={existingCoverUrl}
+                        alt="Ảnh bìa hiện tại"
+                        className="h-full w-full object-cover"
+                      />
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        className="hidden"
+                        onChange={(event) => void handleCoverFileChange(event)}
+                      />
+                    </label>
                   ) : (
                     <label className="flex h-full cursor-pointer flex-col items-center justify-center gap-2 px-5 text-center text-muted-foreground">
                       <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-border bg-white text-lg">
@@ -145,110 +182,67 @@ export function StoryCreatePanel({
                         type="file"
                         accept="image/jpeg,image/png,image/webp"
                         className="hidden"
-                        onChange={async (event) => {
-                          const inputElement = event.currentTarget;
-                          const file = event.target.files?.[0] || null;
-                          const warning = file
-                            ? await getAspectRatioWarning(file, 2 / 3, "bìa")
-                            : "";
-
-                          setForm((current) => ({
-                            ...current,
-                            coverFile: file,
-                          }));
-                          setCoverRatioWarning(warning);
-                          inputElement.value = "";
-                        }}
+                        onChange={(event) => void handleCoverFileChange(event)}
                       />
                     </label>
                   )}
                 </div>
               </div>
-              <div className="flex flex-wrap gap-2">
-                <label className="rounded-xl border border-border bg-white px-3 py-2 text-sm text-foreground transition hover:bg-surface-muted">
-                  <input
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    className="hidden"
-                    onChange={async (event) => {
-                      const inputElement = event.currentTarget;
-                      const file = event.target.files?.[0] || null;
-                      const warning = file
-                        ? await getAspectRatioWarning(file, 2 / 3, "bìa")
-                        : "";
 
-                      setForm((current) => ({
-                        ...current,
-                        coverFile: file,
-                      }));
-                      setCoverRatioWarning(warning);
-                      inputElement.value = "";
+              {form.coverFile ? (
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setForm((current) => ({ ...current, coverFile: null }));
+                      setCoverRatioWarning("");
                     }}
-                  />
-                  Chọn ảnh
-                </label>
-
-                <button
-                  type="button"
-                  disabled={!form.coverFile}
-                  onClick={() => {
-                    setForm((current) => ({ ...current, coverFile: null }));
-                    setCoverRatioWarning("");
-                  }}
-                  className="rounded-xl border border-border bg-white px-3 py-2 text-sm text-foreground transition hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  Bỏ ảnh
-                </button>
-              </div>
+                    className="rounded-lg border border-border bg-white px-3 py-2 text-sm text-foreground transition hover:bg-surface-muted"
+                  >
+                    Bỏ ảnh
+                  </button>
+                </div>
+              ) : null}
 
               {coverRatioWarning ? (
                 <p className="text-xs text-amber-700">{coverRatioWarning}</p>
               ) : null}
-            </div>
+            </section>
           </aside>
 
-          <div className="min-w-0 flex-1 space-y-4">
-            <section className="rounded-[24px] border border-border bg-white p-5">
+          <div className="min-w-0">
+            <section className="h-full rounded-2xl border border-border bg-white p-5">
               <div className="mb-4">
                 <h3 className="text-base font-semibold text-foreground">Thông tin cơ bản</h3>
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
-                <label className="space-y-2 text-sm md:col-span-2">
+                <label className="space-y-2 text-sm">
                   <span className="font-medium text-foreground">Tên truyện</span>
                   <input
                     value={form.title}
                     onChange={(event) =>
                       setForm((current) => {
                         const nextTitle = event.target.value;
-                        const shouldSyncSlug =
-                          current.slug.trim().length === 0 ||
-                          current.slug === slugify(current.title);
-
                         return {
                           ...current,
                           title: nextTitle,
-                          slug: shouldSyncSlug ? slugify(nextTitle) : current.slug,
+                          slug: slugify(nextTitle),
                         };
                       })
                     }
                     placeholder="Nhập tên truyện..."
-                    className="w-full rounded-xl border border-border bg-white px-3 py-2.5 text-sm outline-none focus:border-accent"
+                    className="w-full rounded-lg border border-border bg-white px-3 py-2.5 text-sm outline-none focus:border-accent"
                   />
                 </label>
 
                 <label className="space-y-2 text-sm">
                   <span className="font-medium text-foreground">Slug</span>
                   <input
-                    value={form.slug}
-                    onChange={(event) =>
-                      setForm((current) => ({
-                        ...current,
-                        slug: slugify(event.target.value),
-                      }))
-                    }
+                    value={slugify(form.title)}
+                    readOnly
                     placeholder="ten-truyen-cua-ban"
-                    className="w-full rounded-xl border border-border bg-white px-3 py-2.5 font-mono text-sm outline-none focus:border-accent"
+                    className="w-full cursor-not-allowed rounded-lg border border-border bg-surface-muted px-3 py-2.5 font-mono text-sm text-muted-foreground outline-none"
                   />
                 </label>
               </div>
@@ -265,104 +259,106 @@ export function StoryCreatePanel({
                     }))
                   }
                   placeholder="Giới thiệu ngắn gọn về truyện..."
-                  className="w-full rounded-xl border border-border bg-white px-3 py-2.5 text-sm outline-none focus:border-accent"
+                  className="w-full rounded-lg border border-border bg-white px-3 py-2.5 text-sm outline-none focus:border-accent"
                 />
               </label>
             </section>
-
-            <section className="rounded-[24px] border border-border bg-white p-5">
-              <div className="mb-4">
-                <h3 className="text-base font-semibold text-foreground">Tags</h3>
-              </div>
-
-              <div className="space-y-2 text-sm">
-                <span className="font-medium text-foreground">Tag có sẵn</span>
-                <div className="flex flex-wrap gap-2">
-                  {tags.map((tag) => {
-                    const checked = form.tagIds.includes(tag.id);
-
-                    return (
-                      <button
-                        key={tag.id}
-                        type="button"
-                        disabled={!tag.isActive}
-                        onClick={() =>
-                          setForm((current) => {
-                            const nextTagIds = checked
-                              ? current.tagIds.filter((id) => id !== tag.id)
-                              : [...current.tagIds, tag.id];
-
-                            return {
-                              ...current,
-                              tagIds: [...new Set(nextTagIds)],
-                            };
-                          })
-                        }
-                        className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${
-                          checked
-                            ? "border-accent bg-accent text-white"
-                            : "border-border bg-surface-muted text-foreground hover:bg-white"
-                        } ${!tag.isActive ? "cursor-not-allowed opacity-50" : ""}`}
-                      >
-                        #{tag.name}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="mt-4 space-y-2 text-sm">
-                <span className="font-medium text-foreground">Thêm tag mới (tuỳ chọn)</span>
-                {form.tagNames.length ? (
-                  <div className="flex flex-wrap gap-2">
-                    {form.tagNames.map((tag) => (
-                      <span
-                        key={tag}
-                        className="inline-flex rounded-full border border-border bg-surface-muted px-3 py-1 text-xs font-medium text-foreground"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                ) : null}
-                <textarea
-                  rows={3}
-                  value={form.tagNames.join(", ")}
-                  onChange={(event) =>
-                    setForm((current) => ({
-                      ...current,
-                      tagNames: splitTagInput(event.target.value),
-                    }))
-                  }
-                  placeholder="Ví dụ: cưới trước yêu sau, học đường (tách bằng dấu phẩy)"
-                  className="w-full rounded-xl border border-border bg-white px-3 py-2.5 text-sm outline-none focus:border-accent"
-                />
-              </div>
-            </section>
           </div>
+
+          <div className="hidden xl:block" aria-hidden="true" />
+
+          <section className="rounded-2xl border border-border bg-white p-5">
+            <div className="mb-4">
+              <h3 className="text-base font-semibold text-foreground">Tags</h3>
+            </div>
+
+            <div className="flex flex-wrap gap-2 text-sm">
+              {tags.map((tag) => {
+                const checked = form.tagIds.includes(tag.id);
+
+                return (
+                  <button
+                    key={tag.id}
+                    type="button"
+                    disabled={!tag.isActive}
+                    onClick={() =>
+                      setForm((current) => {
+                        const nextTagIds = checked
+                          ? current.tagIds.filter((id) => id !== tag.id)
+                          : [...current.tagIds, tag.id];
+
+                        return {
+                          ...current,
+                          tagIds: [...new Set(nextTagIds)],
+                        };
+                      })
+                    }
+                    className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${
+                      checked
+                        ? "border-accent bg-accent text-white"
+                        : "border-border bg-surface-muted text-foreground hover:bg-white"
+                    } ${!tag.isActive ? "cursor-not-allowed opacity-50" : ""}`}
+                  >
+                    #{tag.name}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="mt-4 space-y-2 text-sm">
+              <span className="font-medium text-foreground">Thêm tag mới (tuỳ chọn)</span>
+              {form.tagNames.length ? (
+                <div className="flex flex-wrap gap-2">
+                  {form.tagNames.map((tag) => (
+                    <span
+                      key={tag}
+                      className="inline-flex rounded-full border border-border bg-surface-muted px-3 py-1 text-xs font-medium text-foreground"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+              <textarea
+                rows={3}
+                value={form.tagNames.join(", ")}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    tagNames: splitTagInput(event.target.value),
+                  }))
+                }
+                placeholder="Ví dụ: cưới trước yêu sau, học đường (tách bằng dấu phẩy)"
+                className="w-full rounded-lg border border-border bg-white px-3 py-2.5 text-sm outline-none focus:border-accent"
+              />
+            </div>
+          </section>
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-6 py-5">
-        <p className="text-sm text-muted-foreground">
-          Sau khi tạo truyện, bạn có thể chuyển sang quản lý chương để thêm nội dung.
-        </p>
+      <div className="flex flex-wrap items-center justify-end gap-2 border-t border-border px-6 py-5">
         <div className="flex flex-wrap justify-end gap-2">
           <button
             type="button"
             onClick={onClose}
-            disabled={isCreating}
-            className="rounded-xl border border-border bg-white px-4 py-2.5 text-sm font-medium text-foreground transition hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-70"
+            disabled={isSubmitting}
+            className="rounded-lg border border-border bg-white px-4 py-2.5 text-sm font-medium text-foreground transition hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-70"
           >
             Hủy
           </button>
           <button
             type="button"
-            onClick={handleSubmitCreate}
-            disabled={isCreating}
-            className="rounded-xl bg-accent px-4 py-2.5 text-sm font-medium text-white transition hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-70"
+            onClick={() => void handleSubmit()}
+            disabled={isSubmitting}
+            className="rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white transition hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-70"
           >
-            {isCreating ? "Đang tạo..." : "Tạo truyện"}
+            {isSubmitting
+              ? isEdit
+                ? "Đang lưu..."
+                : "Đang tạo..."
+              : isEdit
+                ? "Lưu thay đổi"
+                : "Tạo truyện"}
           </button>
         </div>
       </div>

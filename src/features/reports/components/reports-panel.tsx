@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { ModalCloseButton } from "@/components/ui/modal-close-button";
 import { Pagination } from "@/components/ui/pagination";
 import {
   getAdminReports,
@@ -1252,9 +1253,6 @@ export function ReportsPanel() {
           <p className="mt-2 text-3xl font-semibold text-foreground">
             {reportCases.length}
           </p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Gộp theo đối tượng bị báo cáo
-          </p>
         </div>
 
         <div className="data-card p-5">
@@ -1262,18 +1260,12 @@ export function ReportsPanel() {
           <p className="mt-2 text-3xl font-semibold text-foreground">
             {filteredReportCount}
           </p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Tổng phản ánh trong bộ lọc hiện tại
-          </p>
         </div>
 
         <div className="data-card p-5">
           <p className="text-sm text-muted-foreground">Vụ việc chờ xử lý</p>
           <p className="mt-2 text-3xl font-semibold text-foreground">
             {pendingCount}
-          </p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Cần admin ra quyết định
           </p>
         </div>
 
@@ -1283,9 +1275,6 @@ export function ReportsPanel() {
               <p className="text-sm text-muted-foreground">Ưu tiên cao</p>
               <p className="mt-2 text-3xl font-semibold text-foreground">
                 {highPriorityCount}
-              </p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                High hoặc critical đang chờ xử lý
               </p>
             </div>
             {criticalPendingCount > 0 ? (
@@ -1308,10 +1297,6 @@ export function ReportsPanel() {
       <div className="relative space-y-4">
         <div>
           <h2 className="text-lg font-semibold text-foreground">Danh sách báo cáo</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Các báo cáo cùng trỏ vào một truyện, chương hoặc bình luận sẽ được gộp
-            thành một vụ việc và ưu tiên theo mức độ rủi ro.
-          </p>
         </div>
 
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -1526,7 +1511,7 @@ export function ReportsPanel() {
                 onClick={() => setIsFilterOpen(false)}
                 className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-foreground transition hover:bg-surface-muted"
               >
-                {"Đóng"}
+                {"Hủy"}
               </button>
               <button
                 type="button"
@@ -1703,16 +1688,12 @@ export function ReportsPanel() {
                 </p>
               </div>
 
-              <button
-                type="button"
+              <ModalCloseButton
                 onClick={() => {
                   setSelectedCaseKey(null);
                   setDetailError(null);
                 }}
-                className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-foreground transition hover:bg-surface-muted"
-              >
-                Đóng
-              </button>
+              />
             </div>
 
             <div className="max-h-[calc(90vh-80px)] overflow-y-auto px-5 py-5">

@@ -1,8 +1,8 @@
 ﻿"use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { ModalCloseButton } from "@/components/ui/modal-close-button";
 import { Pagination } from "@/components/ui/pagination";
 import { StoryCreatePanel } from "@/features/stories/components/story-create-panel";
 import {
@@ -31,17 +31,6 @@ function compareText(left: string, right: string) {
 
 function compareDates(left: string, right: string) {
   return new Date(left).getTime() - new Date(right).getTime();
-}
-
-function slugify(value: string) {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-");
 }
 
 function buildEditFormFromStory(story: Awaited<ReturnType<typeof getStoryDetail>>): UpdateStoryPayload {
@@ -101,7 +90,6 @@ function StoryTableHeaderButton({
 }
 
 export function StoriesTable() {
-  const router = useRouter();
   const [stories, setStories] = useState<StoryListItem[]>([]);
   const [tagOptions, setTagOptions] = useState<TagOption[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -114,6 +102,8 @@ export function StoriesTable() {
   const [modalMode, setModalMode] = useState<StoryModalMode | null>(null);
   const [activeStory, setActiveStory] = useState<StoryListItem | null>(null);
   const [editForm, setEditForm] = useState<UpdateStoryPayload | null>(null);
+  const [editCoverUrl, setEditCoverUrl] = useState<string | null>(null);
+  const [editSubmitError, setEditSubmitError] = useState("");
   const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   const [searchText, setSearchText] = useState("");
@@ -173,7 +163,7 @@ export function StoriesTable() {
       await refreshStories();
       setModalMode(null);
       setSuccessMessage("Đã tạo truyện mới.");
-      router.push(`/stories/${created.slug}`);
+      void created;
     } catch (error) {
       setCreateError(error instanceof Error ? error.message : "Không thể tạo truyện.");
     } finally {
@@ -184,9 +174,11 @@ export function StoriesTable() {
   async function openEditModal(story: StoryListItem) {
     setIsSavingEdit(true);
     setErrorMessage("");
+    setEditSubmitError("");
     try {
       const detail = await getStoryDetail(story.slug);
       setEditForm(buildEditFormFromStory(detail));
+      setEditCoverUrl(detail.coverUrl);
       setActiveStory(story);
       setModalMode("edit");
     } catch (error) {
@@ -196,20 +188,22 @@ export function StoriesTable() {
     }
   }
 
-  async function handleSaveEdit() {
-    if (!activeStory || !editForm) return;
+  async function handleSaveEdit(payload: UpdateStoryPayload) {
+    if (!activeStory) return;
     setIsSavingEdit(true);
     setErrorMessage("");
+    setEditSubmitError("");
     setSuccessMessage("");
     try {
-      await updateStory(activeStory.id, editForm);
+      await updateStory(activeStory.id, payload);
       await refreshStories();
       setModalMode(null);
       setActiveStory(null);
       setEditForm(null);
+      setEditCoverUrl(null);
       setSuccessMessage("Đã cập nhật truyện.");
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Không thể cập nhật truyện.");
+      setEditSubmitError(error instanceof Error ? error.message : "Không thể cập nhật truyện.");
     } finally {
       setIsSavingEdit(false);
     }
@@ -393,10 +387,27 @@ export function StoriesTable() {
         </div>
       ) : null}
 
-      {modalMode === "create" ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4">
-          <div className="max-h-[92vh] w-full max-w-6xl overflow-auto">
-            <StoryCreatePanel isCreating={isCreating} submitError={createError} tags={tagOptions} onCreate={handleCreateStory} onClose={() => { setModalMode(null); setCreateError(""); }} />
+      {modalMode === "create" || (modalMode === "edit" && activeStory && editForm) ? (
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-auto bg-black/30 px-4 py-6">
+          <div className="w-full max-w-6xl">
+            <StoryCreatePanel
+              key={modalMode === "edit" && activeStory ? activeStory.id : "create"}
+              variant={modalMode === "edit" ? "edit" : "create"}
+              isSubmitting={modalMode === "edit" ? isSavingEdit : isCreating}
+              submitError={modalMode === "edit" ? editSubmitError : createError}
+              tags={tagOptions}
+              initialForm={modalMode === "edit" && editForm ? editForm : undefined}
+              existingCoverUrl={modalMode === "edit" ? editCoverUrl : undefined}
+              onSubmit={modalMode === "edit" ? handleSaveEdit : handleCreateStory}
+              onClose={() => {
+                setModalMode(null);
+                setCreateError("");
+                setActiveStory(null);
+                setEditForm(null);
+                setEditCoverUrl(null);
+                setEditSubmitError("");
+              }}
+            />
           </div>
         </div>
       ) : null}
@@ -406,7 +417,12 @@ export function StoriesTable() {
           <div className="w-full max-w-3xl rounded-xl border border-border bg-white p-5 shadow-sm">
             <div className="flex items-start justify-between gap-3">
               <h3 className="text-lg font-semibold text-foreground">Chi tiết truyện</h3>
-              <button type="button" onClick={() => { setModalMode(null); setActiveStory(null); }} className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-foreground transition hover:bg-surface-muted">Đóng</button>
+              <ModalCloseButton
+                onClick={() => {
+                  setModalMode(null);
+                  setActiveStory(null);
+                }}
+              />
             </div>
             <div className="mt-4 grid gap-3 md:grid-cols-2">
               <div className="rounded-lg border border-border bg-surface-muted px-3 py-3"><p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Ten truyện</p><p className="mt-1 font-semibold text-foreground">{activeStory.title}</p></div>
@@ -422,40 +438,6 @@ export function StoriesTable() {
         </div>
       ) : null}
 
-      {modalMode === "edit" && activeStory && editForm ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4">
-          <div className="w-full max-w-4xl rounded-xl border border-border bg-white p-5 shadow-sm">
-            <div className="flex items-start justify-between gap-3">
-              <h3 className="text-lg font-semibold text-foreground">Sửa truyện</h3>
-              <button type="button" disabled={isSavingEdit} onClick={() => { setModalMode(null); setActiveStory(null); setEditForm(null); }} className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-foreground transition hover:bg-surface-muted disabled:opacity-60">Đóng</button>
-            </div>
-            <div className="mt-4 grid gap-3 md:grid-cols-2">
-              <label className="space-y-1.5 text-sm md:col-span-2">
-                <span className="font-medium text-foreground">Ten truyện</span>
-                <input value={editForm.title} onChange={(event) => setEditForm((current) => current ? { ...current, title: event.target.value, slug: current.slug.trim().length === 0 || current.slug === slugify(current.title) ? slugify(event.target.value) : current.slug } : current)} className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-accent" />
-              </label>
-              <label className="space-y-1.5 text-sm">
-                <span className="font-medium text-foreground">Slug</span>
-                <input value={editForm.slug} onChange={(event) => setEditForm((current) => current ? { ...current, slug: slugify(event.target.value) } : current)} className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-accent" />
-              </label>
-              <div className="space-y-1.5 text-sm">
-                <span className="font-medium text-foreground">Trạng thái</span>
-                <div className="rounded-lg border border-border bg-surface-muted px-3 py-2 text-muted-foreground">Không sửa trạng thái trong form này.</div>
-              </div>
-              <label className="space-y-1.5 text-sm md:col-span-2">
-                <span className="font-medium text-foreground">Mô tả</span>
-                <textarea rows={6} value={editForm.description} onChange={(event) => setEditForm((current) => current ? { ...current, description: event.target.value } : current)} className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-accent" />
-              </label>
-            </div>
-            <div className="mt-5 flex justify-end gap-2">
-              <button type="button" disabled={isSavingEdit} onClick={() => { setModalMode(null); setActiveStory(null); setEditForm(null); }} className="rounded-lg border border-border bg-white px-4 py-2 text-sm font-medium text-foreground transition hover:bg-surface-muted disabled:opacity-60">Hủy</button>
-              <button type="button" onClick={() => void handleSaveEdit()} disabled={isSavingEdit} className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition hover:bg-accent-strong disabled:opacity-60">
-                {isSavingEdit ? "Đang lưu..." : "Lưu thay đổi"}
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
     </section>
   );
 }

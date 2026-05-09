@@ -2,6 +2,7 @@
 
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { ModalCloseButton } from "@/components/ui/modal-close-button";
 import { Pagination } from "@/components/ui/pagination";
 import {
   createChapter,
@@ -820,14 +821,9 @@ export function ChaptersManager() {
                   {selectedStory?.title || "--"}
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={closeMainModal}
-                disabled={isSavingChapter}
-                className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-foreground transition hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                Đóng
-              </button>
+              {activeModalMode === "detail" ? (
+                <ModalCloseButton onClick={closeMainModal} disabled={isSavingChapter} />
+              ) : null}
             </div>
 
             {activeModalMode === "detail" && activeChapter ? (
