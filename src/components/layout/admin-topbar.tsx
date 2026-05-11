@@ -23,6 +23,7 @@ type NotificationItem = {
   body: string | null;
   is_read: boolean;
   created_at: string;
+  type?: string;
 };
 
 type NotificationRealtimePayload = NotificationItem;
@@ -139,6 +140,20 @@ export function AdminTopbar({
     }
   }
 
+  async function markAsRead(notificationId: string) {
+    const id = String(notificationId || "").trim();
+    if (!id) return;
+    try {
+      await apiClient.patch(`/notifications/${id}/read`);
+      setNotifications((current) =>
+        current.map((item) => (item.id === id ? { ...item, is_read: true } : item)),
+      );
+      setUnreadCount((current) => Math.max(0, current - 1));
+    } catch {
+      // no-op
+    }
+  }
+
   useEffect(() => {
     void loadUnreadCount();
   }, [user?.id]);
@@ -164,6 +179,8 @@ export function AdminTopbar({
 
     socket.on("notification:new", (payload: NotificationRealtimePayload) => {
       if (!payload?.id) return;
+      const t = String(payload.type ?? "").trim();
+      if (t === "admin_message") return;
       setNotifications((current) => {
         const deduped = current.filter((item) => item.id !== payload.id);
         return [payload, ...deduped].slice(0, 20);
@@ -236,6 +253,7 @@ export function AdminTopbar({
                   {topNotifications.map((item) => (
                     <article
                       key={item.id}
+                      onClick={() => void markAsRead(item.id)}
                       className={`rounded-lg border px-3 py-2 ${
                         item.is_read
                           ? "border-border bg-white"

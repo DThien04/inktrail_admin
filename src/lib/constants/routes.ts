@@ -7,6 +7,7 @@ export const ADMIN_NAV_ITEMS = [
   { href: "/chapters", label: "Quản lý chương", icon: "chapters" },
   { href: "/tags", label: "Tags", icon: "tags" },
   { href: "/users", label: "Người dùng", icon: "users" },
+  { href: "/push-notifications", label: "Gửi thông báo", icon: "push" },
 ] as const;
 
 export function getNavItemsByRole(role?: AuthUser["role"]) {

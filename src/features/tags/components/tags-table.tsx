@@ -720,16 +720,23 @@ export function TagsTable() {
   }
 
   return (
-    <section className="rounded-xl border border-border bg-white p-5 shadow-sm">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center">
-          <div className="relative w-full sm:max-w-md">
+    <section className="space-y-4">
+      {errorMessage ? (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {errorMessage}
+        </div>
+      ) : null}
+
+      <section className="space-y-3">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div className="flex w-full flex-col gap-2 md:flex-row md:items-center">
+            <div className="relative w-full md:max-w-[560px]">
             <input
               type="search"
               value={draftKeyword}
               onChange={(event) => setDraftKeyword(event.target.value)}
               placeholder="Tìm tag theo tên..."
-              className="h-10 w-full rounded-xl border border-border bg-white px-4 pr-10 text-sm text-foreground shadow-sm outline-none transition placeholder:text-muted-foreground focus:border-accent"
+              className="w-full rounded-xl border border-border bg-white px-4 py-2 pr-10 text-sm text-foreground shadow-sm outline-none transition placeholder:text-muted-foreground focus:border-accent"
             />
             {draftKeyword.trim().length > 0 ? (
               <button
@@ -749,7 +756,7 @@ export function TagsTable() {
               setFilterGroupId(event.target.value);
               setPage(1);
             }}
-            className="h-10 w-full min-w-[11rem] rounded-xl border border-border bg-white px-3 text-sm text-foreground shadow-sm outline-none focus:border-accent sm:w-auto"
+            className="w-full min-w-[11rem] rounded-xl border border-border bg-white px-3 py-2 text-sm text-foreground shadow-sm outline-none focus:border-accent md:w-auto"
             aria-label="Lọc theo nhóm tag"
           >
             <option value="">Tất cả nhóm</option>
@@ -806,15 +813,10 @@ export function TagsTable() {
           </div>
         </div>
       </div>
+      </section>
 
-      {errorMessage ? (
-        <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {errorMessage}
-        </div>
-      ) : null}
-
-      <div className="mt-4 space-y-4">
-        <div className="overflow-x-auto rounded-xl border border-border">
+      <div className="overflow-hidden rounded-xl border border-border bg-white">
+        <div className="overflow-x-auto">
           <table className="min-w-full text-left text-sm">
             <thead className="bg-surface-muted text-muted-foreground">
               <tr>
@@ -1196,7 +1198,7 @@ export function TagsTable() {
             {modalMode === "groups" && groupSubModal === "delete" && groupActionTarget ? (
               <div className="mt-4 space-y-2">
                 <p className="text-sm text-foreground">
-                  Xóa nhóm <span className="font-semibold">"{groupActionTarget.name}"</span>?
+                  Xóa nhóm <span className="font-semibold">{groupActionTarget.name}</span>?
                 </p>
                 <p className="text-sm text-muted-foreground">
                   {groupActionTarget.tagCount > 0

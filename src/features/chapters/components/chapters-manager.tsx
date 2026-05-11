@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { ModalCloseButton } from "@/components/ui/modal-close-button";
 import { Pagination } from "@/components/ui/pagination";
+import { Toast } from "@/components/ui/toast";
 import {
   createChapter,
   deleteChapter,
@@ -167,6 +168,18 @@ export function ChaptersManager() {
   const [isReloading, setIsReloading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  useEffect(() => {
+    if (!successMessage) return;
+    const t = window.setTimeout(() => setSuccessMessage(""), 3200);
+    return () => window.clearTimeout(t);
+  }, [successMessage]);
+
+  useEffect(() => {
+    if (!errorMessage) return;
+    const t = window.setTimeout(() => setErrorMessage(""), 4200);
+    return () => window.clearTimeout(t);
+  }, [errorMessage]);
+
 
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | ChapterStatus>("all");
@@ -602,18 +615,6 @@ export function ChaptersManager() {
         </div>
       </section>
 
-      {successMessage ? (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-          {successMessage}
-        </div>
-      ) : null}
-
-      {errorMessage ? (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {errorMessage}
-        </div>
-      ) : null}
-
       <div className="overflow-hidden rounded-xl border border-border bg-white">
         <div className="overflow-x-auto">
           <table className="min-w-full text-left text-sm">
@@ -942,6 +943,22 @@ export function ChaptersManager() {
           </div>
         </div>
       ) : null}
+
+      <Toast
+        open={Boolean(successMessage)}
+        title="Thành công"
+        message={successMessage}
+        variant="success"
+        onClose={() => setSuccessMessage("")}
+      />
+      <Toast
+        open={Boolean(errorMessage)}
+        title="Có lỗi xảy ra"
+        message={errorMessage}
+        variant="error"
+        onClose={() => setErrorMessage("")}
+        durationMs={4200}
+      />
     </section>
   );
 }

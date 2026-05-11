@@ -16,7 +16,8 @@ type NavIconKey =
   | "reports"
   | "chapters"
   | "tags"
-  | "users";
+  | "users"
+  | "push";
 
 function NavIcon({ icon, active }: { icon: NavIconKey; active: boolean }) {
   const color = active ? "text-white" : "text-muted-foreground";
@@ -66,6 +67,13 @@ function NavIcon({ icon, active }: { icon: NavIconKey; active: boolean }) {
         <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" className={common}>
           <circle cx="10" cy="7" r="3" />
           <path d="M4 16c1.3-2.4 3.5-3.6 6-3.6S14.7 13.6 16 16" strokeLinecap="round" />
+        </svg>
+      );
+    case "push":
+      return (
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" className={common}>
+          <path d="M2.5 10 18 2.5v15L11 11.5" strokeLinejoin="round" />
+          <path d="M18 2.5 11 11.5v6l-2.5-4" strokeLinejoin="round" />
         </svg>
       );
   }

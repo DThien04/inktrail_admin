@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { ModalCloseButton } from "@/components/ui/modal-close-button";
 import { Pagination } from "@/components/ui/pagination";
+import { Toast } from "@/components/ui/toast";
 import { StoryCreatePanel } from "@/features/stories/components/story-create-panel";
 import {
   formatStoryDate,
@@ -98,6 +99,18 @@ export function StoriesTable() {
   const [createError, setCreateError] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  useEffect(() => {
+    if (!successMessage) return;
+    const t = window.setTimeout(() => setSuccessMessage(""), 3200);
+    return () => window.clearTimeout(t);
+  }, [successMessage]);
+
+  useEffect(() => {
+    if (!errorMessage) return;
+    const t = window.setTimeout(() => setErrorMessage(""), 4200);
+    return () => window.clearTimeout(t);
+  }, [errorMessage]);
+
 
   const [modalMode, setModalMode] = useState<StoryModalMode | null>(null);
   const [activeStory, setActiveStory] = useState<StoryListItem | null>(null);
@@ -284,9 +297,6 @@ export function StoriesTable() {
 
   return (
     <section className="space-y-4">
-      {successMessage ? <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{successMessage}</div> : null}
-      {errorMessage ? <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{errorMessage}</div> : null}
-
       <section className="grid gap-4 md:grid-cols-3">
         <div className="data-card p-4"><p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Tổng truyện</p><p className="mt-2 text-2xl font-semibold text-foreground">{summary.total}</p></div>
         <div className="data-card p-4"><p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Đang phát hành</p><p className="mt-2 text-2xl font-semibold text-foreground">{summary.published}</p></div>
@@ -438,6 +448,21 @@ export function StoriesTable() {
         </div>
       ) : null}
 
+      <Toast
+        open={Boolean(successMessage)}
+        title="Thành công"
+        message={successMessage}
+        variant="success"
+        onClose={() => setSuccessMessage("")}
+      />
+      <Toast
+        open={Boolean(errorMessage)}
+        title="Có lỗi xảy ra"
+        message={errorMessage}
+        variant="error"
+        onClose={() => setErrorMessage("")}
+        durationMs={4200}
+      />
     </section>
   );
 }
