@@ -26,6 +26,8 @@ type ApiAdminReportListResponse = {
     case_last_reported_at?: string | null;
     case_restored_at?: string | null;
     case_restored_by_id?: string | null;
+    case_account_lock_applied?: boolean;
+    case_account_locked_user_id?: string | null;
     case_ai_flagged?: boolean;
     case_ai_categories?: string[] | null;
     case_ai_confidence?: number | null;
@@ -37,6 +39,7 @@ type ApiAdminReportListResponse = {
       | "review_soon"
       | "review_urgent"
       | "remove_candidate"
+      | "account_lock_candidate"
       | null;
     case_ai_checked_at?: string | null;
     case_appeal_status?: AdminReportAppealStatus | null;
@@ -117,6 +120,8 @@ function mapReportItem(
     caseLastReportedAt: item.case_last_reported_at ?? null,
     caseRestoredAt: item.case_restored_at ?? null,
     caseRestoredById: item.case_restored_by_id ?? null,
+    caseAccountLockApplied: Boolean(item.case_account_lock_applied),
+    caseAccountLockedUserId: item.case_account_locked_user_id ?? null,
     caseAiFlagged: Boolean(item.case_ai_flagged),
     caseAiCategories: item.case_ai_categories ?? null,
     caseAiConfidence: item.case_ai_confidence ?? null,
@@ -253,10 +258,15 @@ export async function updateAdminReportStatus({
   return mapReportItem(response);
 }
 
-export async function processCriticalAdminReportCases(): Promise<{
+export async function processCriticalAdminReportCases(
+  options: { lockAuthor?: boolean; lockReason?: string } = {},
+): Promise<{
   processedCaseCount: number;
   processedReportCount: number;
+  lockedAuthorCount: number;
   failedCaseCount: number;
+  remainingCriticalCount: number;
+  batchLimit: number;
   errors: Array<{
     caseId: string;
     targetType: AdminReportType;
@@ -267,19 +277,30 @@ export async function processCriticalAdminReportCases(): Promise<{
   const response = await apiClient.post<{
     processed_case_count: number;
     processed_report_count: number;
+    locked_author_count?: number;
     failed_case_count: number;
+    remaining_critical_count?: number;
+    batch_limit?: number;
     errors?: Array<{
       case_id: string;
       target_type: AdminReportType;
       message: string;
     }>;
     items?: ApiAdminReportListResponse["items"];
-  }>("/reports/admin/cases/critical/process");
+  }>("/reports/admin/cases/critical/process", {
+    body: {
+      lock_author: Boolean(options.lockAuthor),
+      lock_reason: options.lockReason ?? "",
+    },
+  });
 
   return {
     processedCaseCount: response.processed_case_count,
     processedReportCount: response.processed_report_count,
+    lockedAuthorCount: response.locked_author_count ?? 0,
     failedCaseCount: response.failed_case_count,
+    remainingCriticalCount: response.remaining_critical_count ?? 0,
+    batchLimit: response.batch_limit ?? 0,
     errors:
       response.errors?.map((error) => ({
         caseId: error.case_id,
@@ -292,12 +313,159 @@ export async function processCriticalAdminReportCases(): Promise<{
 
 export async function restoreAdminReportCase(
   caseId: string,
+  options: { unlockUser?: boolean } = {},
 ): Promise<AdminReportListItem> {
   const response = await apiClient.post<ApiAdminReportListResponse["items"][number]>(
     `/reports/admin/cases/${caseId}/restore`,
+    {
+      body: {
+        unlock_user: Boolean(options.unlockUser),
+      },
+    },
   );
 
   return mapReportItem(response);
+}
+
+export type AdminViolationSummary = {
+  user: {
+    id: string;
+    email: string;
+    displayName: string;
+    role: string;
+    isLocked: boolean;
+    lockedAt: string | null;
+    lockedUntil: string | null;
+    lockedReason: string | null;
+    lockedBy: { id: string; displayName: string } | null;
+  };
+  counts: {
+    storiesHidden: number;
+    chaptersHidden: number;
+    commentsRemoved: number;
+    accountLockCases: number;
+    totalContentViolations: number;
+  };
+};
+
+export async function getUserViolationSummary(
+  userId: string,
+): Promise<AdminViolationSummary> {
+  const response = await apiClient.get<{
+    user: {
+      id: string;
+      email: string;
+      display_name: string;
+      role: string;
+      is_locked: boolean;
+      locked_at: string | null;
+      locked_until: string | null;
+      locked_reason: string | null;
+      locked_by: { id: string; display_name: string } | null;
+    };
+    counts: {
+      stories_hidden: number;
+      chapters_hidden: number;
+      comments_removed: number;
+      account_lock_cases: number;
+      total_content_violations: number;
+    };
+  }>(`/users/admin/${userId}/violation-summary`);
+
+  return {
+    user: {
+      id: response.user.id,
+      email: response.user.email,
+      displayName: response.user.display_name,
+      role: response.user.role,
+      isLocked: response.user.is_locked,
+      lockedAt: response.user.locked_at,
+      lockedUntil: response.user.locked_until,
+      lockedReason: response.user.locked_reason,
+      lockedBy: response.user.locked_by
+        ? {
+            id: response.user.locked_by.id,
+            displayName: response.user.locked_by.display_name,
+          }
+        : null,
+    },
+    counts: {
+      storiesHidden: response.counts.stories_hidden,
+      chaptersHidden: response.counts.chapters_hidden,
+      commentsRemoved: response.counts.comments_removed,
+      accountLockCases: response.counts.account_lock_cases,
+      totalContentViolations: response.counts.total_content_violations,
+    },
+  };
+}
+
+export type LockReportCaseAuthorPayload = {
+  reason: string;
+  lockedUntil: string | null;
+  alsoResolveContent: boolean;
+};
+
+export type LockReportCaseAuthorResult = {
+  caseId: string;
+  accountLockApplied: boolean;
+  resolvedReportCount: number;
+  lockedUser: {
+    id: string;
+    email: string;
+    displayName: string;
+    isLocked: boolean;
+    lockedAt: string | null;
+    lockedUntil: string | null;
+    lockedReason: string | null;
+  } | null;
+  representative: AdminReportListItem | null;
+};
+
+export async function lockReportCaseAuthor(
+  caseId: string,
+  payload: LockReportCaseAuthorPayload,
+): Promise<LockReportCaseAuthorResult> {
+  const response = await apiClient.post<{
+    case_id: string;
+    account_lock_applied: boolean;
+    resolved_report_count: number;
+    locked_user: {
+      id: string;
+      email: string;
+      display_name: string;
+      is_locked: boolean;
+      locked_at: string | null;
+      locked_until: string | null;
+      locked_reason: string | null;
+    } | null;
+    representative: ApiAdminReportListResponse["items"][number] | null;
+  }>(`/reports/admin/cases/${caseId}/lock-author`, {
+    body: {
+      reason: payload.reason,
+      locked_until: payload.lockedUntil,
+      also_resolve_content: payload.alsoResolveContent,
+    },
+  });
+
+  return {
+    caseId: response.case_id,
+    accountLockApplied: response.account_lock_applied,
+    resolvedReportCount: response.resolved_report_count,
+    lockedUser: response.locked_user
+      ? {
+          id: response.locked_user.id,
+          email: response.locked_user.email,
+          displayName: response.locked_user.display_name,
+          isLocked: response.locked_user.is_locked,
+          lockedAt: response.locked_user.locked_at,
+          lockedUntil: response.locked_user.locked_until,
+          lockedReason: response.locked_user.locked_reason,
+        }
+      : null,
+    representative: response.representative
+      ? mapReportItem(response.representative)
+      : null,
+  };
 }
 
 export async function resolveAdminReportAppeal({

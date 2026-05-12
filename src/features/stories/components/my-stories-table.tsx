@@ -437,7 +437,7 @@ export function MyStoriesTable() {
               <tr>
                 <th className="px-4 py-3 font-semibold"><StoryTableHeaderButton label="Truyện" sortKey="title" activeSortKey={sortKey} direction={sortDirection} onSort={toggleSort} /></th>
                 <th className="px-4 py-3 font-semibold"><StoryTableHeaderButton label="Trạng thái" sortKey="status" activeSortKey={sortKey} direction={sortDirection} onSort={toggleSort} /></th>
-                <th className="px-4 py-3 font-semibold">AI kiểm duyệt</th>
+                <th className="px-4 py-3 font-semibold">Kiểm duyệt</th>
                 <th className="px-4 py-3 font-semibold"><StoryTableHeaderButton label="Cập nhật" sortKey="updatedAt" activeSortKey={sortKey} direction={sortDirection} onSort={toggleSort} /></th>
                 <th className="px-4 py-3 font-semibold"><StoryTableHeaderButton label="Lượt đọc" sortKey="readCount" activeSortKey={sortKey} direction={sortDirection} onSort={toggleSort} /></th>
                 <th className="px-4 py-3 font-semibold"><StoryTableHeaderButton label="Đánh giá" sortKey="rating" activeSortKey={sortKey} direction={sortDirection} onSort={toggleSort} /></th>

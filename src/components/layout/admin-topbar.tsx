@@ -28,6 +28,13 @@ type NotificationItem = {
 
 type NotificationRealtimePayload = NotificationItem;
 
+/**
+ * Các loại thông báo có ích với admin (đồng bộ với ADMIN_RELEVANT_NOTIFICATION_TYPES
+ * trong notification.service.js). Tất cả loại khác (chapter_liked, chapter_commented,
+ * chapter_published, story_published, admin_message do admin tự gửi) bị lọc khỏi bell.
+ */
+const ADMIN_RELEVANT_NOTIFICATION_TYPES = new Set<string>(["system"]);
+
 function resolveSocketUrl(apiBaseUrl: string) {
   if (!apiBaseUrl) return "";
   try {
@@ -103,7 +110,9 @@ export function AdminTopbar({
   async function loadUnreadCount() {
     if (!user) return;
     try {
-      const response = await apiClient.get<{ unread_count: number }>("/notifications/me/unread-count");
+      const response = await apiClient.get<{ unread_count: number }>(
+        "/notifications/me/unread-count?for_admin=true",
+      );
       setUnreadCount(response.unread_count ?? 0);
     } catch {
       // no-op
@@ -115,7 +124,7 @@ export function AdminTopbar({
     setIsLoadingNotifications(true);
     try {
       const response = await apiClient.get<{ items: NotificationItem[] }>(
-        "/notifications/me?limit=8",
+        "/notifications/me?limit=8&for_admin=true",
       );
       setNotifications(response.items ?? []);
     } catch {
@@ -180,7 +189,7 @@ export function AdminTopbar({
     socket.on("notification:new", (payload: NotificationRealtimePayload) => {
       if (!payload?.id) return;
       const t = String(payload.type ?? "").trim();
-      if (t === "admin_message") return;
+      if (!ADMIN_RELEVANT_NOTIFICATION_TYPES.has(t)) return;
       setNotifications((current) => {
         const deduped = current.filter((item) => item.id !== payload.id);
         return [payload, ...deduped].slice(0, 20);

@@ -2,10 +2,20 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Pagination } from "@/components/ui/pagination";
-import { getAdminUsers } from "@/features/users/services/users-service";
-import type { AdminUserItem, UserRole } from "@/features/users/types";
+import { Toast } from "@/components/ui/toast";
+import { getStoredUser } from "@/features/auth/storage";
+import {
+  getAdminUsers,
+  lockAdminUser,
+  unlockAdminUser,
+} from "@/features/users/services/users-service";
+import type {
+  AdminUserItem,
+  UserRole,
+  UserStatusFilter,
+} from "@/features/users/types";
 
-type UserSortKey = "displayName" | "email" | "role" | "createdAt";
+type UserSortKey = "displayName" | "email" | "role" | "status" | "createdAt";
 type SortDirection = "asc" | "desc";
 
 function compareText(left: string, right: string) {
@@ -26,6 +36,19 @@ function formatDate(value: string) {
   }).format(date);
 }
 
+function formatDateTime(value: string | null) {
+  if (!value) return "--";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "--";
+  return new Intl.DateTimeFormat("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
 function roleLabel(role: UserRole) {
   if (role === "admin") return "Admin";
   return "Độc giả";
@@ -34,6 +57,24 @@ function roleLabel(role: UserRole) {
 function roleClass(role: UserRole) {
   if (role === "admin") return "border-red-200 bg-red-50 text-red-700";
   return "border-slate-200 bg-slate-50 text-slate-700";
+}
+
+function isCurrentlyLocked(user: AdminUserItem) {
+  if (!user.isLocked) return false;
+  if (!user.lockedUntil) return true;
+  return new Date(user.lockedUntil).getTime() > Date.now();
+}
+
+function buildLockTooltip(user: AdminUserItem) {
+  if (!isCurrentlyLocked(user)) return undefined;
+  const parts: string[] = [];
+  if (user.lockedReason) parts.push(`Lý do: ${user.lockedReason}`);
+  parts.push(
+    `Mở khóa: ${user.lockedUntil ? formatDateTime(user.lockedUntil) : "Vĩnh viễn"}`,
+  );
+  if (user.lockedBy) parts.push(`Bởi: ${user.lockedBy.displayName}`);
+  if (user.lockedAt) parts.push(`Lúc: ${formatDateTime(user.lockedAt)}`);
+  return parts.join("\n");
 }
 
 function UserTableHeaderButton({
@@ -70,15 +111,35 @@ export function UsersTable() {
   const [isLoading, setIsLoading] = useState(true);
   const [isReloading, setIsReloading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [toast, setToast] = useState<{ title: string; message: string } | null>(null);
 
   const [searchText, setSearchText] = useState("");
   const [roleFilter, setRoleFilter] = useState<"all" | UserRole>("all");
+  const [statusFilter, setStatusFilter] = useState<UserStatusFilter>("all");
   const [draftRoleFilter, setDraftRoleFilter] = useState<"all" | UserRole>("all");
+  const [draftStatusFilter, setDraftStatusFilter] = useState<UserStatusFilter>("all");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [sortKey, setSortKey] = useState<UserSortKey>("createdAt");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+
+  const [lockTarget, setLockTarget] = useState<AdminUserItem | null>(null);
+  const [lockReason, setLockReason] = useState("");
+  const [lockUntil, setLockUntil] = useState("");
+  const [lockSubmitting, setLockSubmitting] = useState(false);
+  const [lockError, setLockError] = useState("");
+
+  const [unlockTarget, setUnlockTarget] = useState<AdminUserItem | null>(null);
+  const [unlockSubmitting, setUnlockSubmitting] = useState(false);
+  const [unlockError, setUnlockError] = useState("");
+
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const stored = getStoredUser();
+    setCurrentUserId(stored?.id ?? null);
+  }, []);
 
   useEffect(() => {
     void loadUsers();
@@ -90,7 +151,7 @@ export function UsersTable() {
 
     setErrorMessage("");
     try {
-      const rows = await getAdminUsers({ role: "all" });
+      const rows = await getAdminUsers({ role: "all", status: "all" });
       setUsers(rows);
     } catch (error) {
       setUsers([]);
@@ -109,6 +170,8 @@ export function UsersTable() {
     const query = searchText.trim().toLowerCase();
     const filtered = users.filter((item) => {
       if (roleFilter !== "all" && item.role !== roleFilter) return false;
+      if (statusFilter === "locked" && !isCurrentlyLocked(item)) return false;
+      if (statusFilter === "active" && isCurrentlyLocked(item)) return false;
       if (!query) return true;
       return [item.displayName, item.email, roleLabel(item.role)].join(" ").toLowerCase().includes(query);
     });
@@ -125,13 +188,16 @@ export function UsersTable() {
         case "role":
           result = compareText(left.role, right.role);
           break;
+        case "status":
+          result = Number(isCurrentlyLocked(left)) - Number(isCurrentlyLocked(right));
+          break;
         case "createdAt":
         default:
           result = compareDates(left.createdAt, right.createdAt);
       }
       return sortDirection === "asc" ? result : -result;
     });
-  }, [users, searchText, roleFilter, sortKey, sortDirection]);
+  }, [users, searchText, roleFilter, statusFilter, sortKey, sortDirection]);
 
   const totalItems = filteredAndSortedUsers.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
@@ -143,7 +209,7 @@ export function UsersTable() {
 
   useEffect(() => {
     setPage(1);
-  }, [searchText, roleFilter, sortKey, sortDirection]);
+  }, [searchText, roleFilter, statusFilter, sortKey, sortDirection]);
 
   function toggleSort(nextKey: UserSortKey) {
     if (sortKey === nextKey) {
@@ -156,17 +222,119 @@ export function UsersTable() {
 
   function applyFilters() {
     setRoleFilter(draftRoleFilter);
+    setStatusFilter(draftStatusFilter);
     setIsFilterOpen(false);
   }
 
   function resetFilters() {
     setSearchText("");
     setRoleFilter("all");
+    setStatusFilter("all");
     setDraftRoleFilter("all");
+    setDraftStatusFilter("all");
     setIsFilterOpen(false);
   }
 
-  const activeFilterCount = roleFilter === "all" ? 0 : 1;
+  const activeFilterCount =
+    (roleFilter === "all" ? 0 : 1) + (statusFilter === "all" ? 0 : 1);
+
+  function openLockModal(user: AdminUserItem) {
+    setLockTarget(user);
+    setLockReason("");
+    setLockUntil("");
+    setLockError("");
+  }
+
+  function closeLockModal() {
+    if (lockSubmitting) return;
+    setLockTarget(null);
+    setLockReason("");
+    setLockUntil("");
+    setLockError("");
+  }
+
+  async function submitLock() {
+    if (!lockTarget) return;
+    const trimmedReason = lockReason.trim();
+    if (!trimmedReason) {
+      setLockError("Vui lòng nhập lý do khóa tài khoản.");
+      return;
+    }
+    if (lockUntil) {
+      const parsed = new Date(lockUntil);
+      if (Number.isNaN(parsed.getTime())) {
+        setLockError("Thời hạn khóa không hợp lệ.");
+        return;
+      }
+      if (parsed.getTime() <= Date.now()) {
+        setLockError("Thời hạn khóa phải lớn hơn thời điểm hiện tại.");
+        return;
+      }
+    }
+
+    setLockSubmitting(true);
+    setLockError("");
+    try {
+      const updated = await lockAdminUser(lockTarget.id, {
+        reason: trimmedReason,
+        lockedUntil: lockUntil ? new Date(lockUntil).toISOString() : null,
+      });
+      setUsers((current) =>
+        current.map((item) => (item.id === updated.id ? updated : item)),
+      );
+      setToast({
+        title: "Đã khóa tài khoản",
+        message: `Tài khoản "${updated.displayName}" đã bị khóa.`,
+      });
+      setLockTarget(null);
+      setLockReason("");
+      setLockUntil("");
+    } catch (error) {
+      setLockError(
+        error instanceof Error && error.message
+          ? error.message
+          : "Không thể khóa tài khoản.",
+      );
+    } finally {
+      setLockSubmitting(false);
+    }
+  }
+
+  function openUnlockModal(user: AdminUserItem) {
+    setUnlockTarget(user);
+    setUnlockError("");
+  }
+
+  function closeUnlockModal() {
+    if (unlockSubmitting) return;
+    setUnlockTarget(null);
+    setUnlockError("");
+  }
+
+  async function submitUnlock() {
+    if (!unlockTarget) return;
+    setUnlockSubmitting(true);
+    setUnlockError("");
+    try {
+      const updated = await unlockAdminUser(unlockTarget.id);
+      setUsers((current) =>
+        current.map((item) => (item.id === updated.id ? updated : item)),
+      );
+      setToast({
+        title: "Đã mở khóa tài khoản",
+        message: `Tài khoản "${updated.displayName}" có thể đăng nhập trở lại.`,
+      });
+      setUnlockTarget(null);
+    } catch (error) {
+      setUnlockError(
+        error instanceof Error && error.message
+          ? error.message
+          : "Không thể mở khóa tài khoản.",
+      );
+    } finally {
+      setUnlockSubmitting(false);
+    }
+  }
 
   return (
     <section className="space-y-4">
@@ -175,6 +343,14 @@ export function UsersTable() {
           {errorMessage}
         </div>
       ) : null}
+
+      <Toast
+        open={toast !== null}
+        title={toast?.title ?? ""}
+        message={toast?.message ?? ""}
+        variant="success"
+        onClose={() => setToast(null)}
+      />
 
       <section className="space-y-3">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -215,6 +391,7 @@ export function UsersTable() {
               type="button"
               onClick={() => {
                 setDraftRoleFilter(roleFilter);
+                setDraftStatusFilter(statusFilter);
                 setIsFilterOpen(true);
               }}
               className="inline-flex items-center gap-2 rounded-lg border border-border bg-white px-4 py-2.5 text-sm font-medium text-foreground transition hover:bg-surface-muted"
@@ -241,29 +418,72 @@ export function UsersTable() {
                 <th className="px-4 py-3 font-semibold"><UserTableHeaderButton label="Người dùng" sortKey="displayName" activeSortKey={sortKey} direction={sortDirection} onSort={toggleSort} /></th>
                 <th className="px-4 py-3 font-semibold"><UserTableHeaderButton label="Email" sortKey="email" activeSortKey={sortKey} direction={sortDirection} onSort={toggleSort} /></th>
                 <th className="px-4 py-3 font-semibold"><UserTableHeaderButton label="Vai trò" sortKey="role" activeSortKey={sortKey} direction={sortDirection} onSort={toggleSort} /></th>
+                <th className="px-4 py-3 font-semibold"><UserTableHeaderButton label="Trạng thái" sortKey="status" activeSortKey={sortKey} direction={sortDirection} onSort={toggleSort} /></th>
                 <th className="px-4 py-3 font-semibold"><UserTableHeaderButton label="Ngày tạo" sortKey="createdAt" activeSortKey={sortKey} direction={sortDirection} onSort={toggleSort} /></th>
+                <th className="px-4 py-3 font-semibold text-right">Hành động</th>
               </tr>
             </thead>
             <tbody>
               {isLoading ? (
-                <tr><td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">Đang tải danh sách người dùng...</td></tr>
+                <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">Đang tải danh sách người dùng...</td></tr>
               ) : totalItems === 0 ? (
-                <tr><td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">Không có người dùng phù hợp bộ lọc.</td></tr>
+                <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">Không có người dùng phù hợp bộ lọc.</td></tr>
               ) : (
-                paginatedUsers.map((user) => (
-                  <tr key={user.id} className="border-t border-border/70">
-                    <td className="px-4 py-3">
-                      <p className="font-semibold text-foreground">{user.displayName}</p>
-                    </td>
-                    <td className="px-4 py-3 text-foreground">{user.email}</td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex rounded-lg border px-2.5 py-1 text-xs font-semibold ${roleClass(user.role)}`}>
-                        {roleLabel(user.role)}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">{formatDate(user.createdAt)}</td>
-                  </tr>
-                ))
+                paginatedUsers.map((user) => {
+                  const locked = isCurrentlyLocked(user);
+                  const isSelf = currentUserId === user.id;
+                  return (
+                    <tr key={user.id} className="border-t border-border/70">
+                      <td className="px-4 py-3">
+                        <p className="font-semibold text-foreground">{user.displayName}</p>
+                      </td>
+                      <td className="px-4 py-3 text-foreground">{user.email}</td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex rounded-lg border px-2.5 py-1 text-xs font-semibold ${roleClass(user.role)}`}>
+                          {roleLabel(user.role)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          title={buildLockTooltip(user)}
+                          className={`inline-flex rounded-lg border px-2.5 py-1 text-xs font-semibold ${
+                            locked
+                              ? "border-amber-200 bg-amber-50 text-amber-700"
+                              : "border-emerald-200 bg-emerald-50 text-emerald-700"
+                          }`}
+                        >
+                          {locked
+                            ? `Đã khóa${user.lockedUntil ? ` đến ${formatDate(user.lockedUntil)}` : " (vĩnh viễn)"}`
+                            : "Hoạt động"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">{formatDate(user.createdAt)}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex justify-end">
+                          {locked ? (
+                            <button
+                              type="button"
+                              onClick={() => openUnlockModal(user)}
+                              className="inline-flex items-center rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100"
+                            >
+                              Mở khóa
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              disabled={isSelf}
+                              onClick={() => openLockModal(user)}
+                              title={isSelf ? "Không thể tự khóa tài khoản của bạn" : undefined}
+                              className="inline-flex items-center rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              Khóa
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -286,7 +506,7 @@ export function UsersTable() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4">
           <div className="w-full max-w-md rounded-xl border border-border bg-white p-5 shadow-sm">
             <h3 className="text-lg font-semibold text-foreground">Bộ lọc người dùng</h3>
-            <div className="mt-4">
+            <div className="mt-4 space-y-4">
               <label className="space-y-1.5 text-sm">
                 <span className="font-medium text-foreground">Vai trò</span>
                 <select
@@ -295,14 +515,30 @@ export function UsersTable() {
                   className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-accent"
                 >
                   <option value="all">Tất cả</option>
-                  <option value="admin">Admin</option>                  <option value="reader">Độc giả</option>
+                  <option value="admin">Admin</option>
+                  <option value="reader">Độc giả</option>
+                </select>
+              </label>
+              <label className="space-y-1.5 text-sm">
+                <span className="font-medium text-foreground">Trạng thái</span>
+                <select
+                  value={draftStatusFilter}
+                  onChange={(event) => setDraftStatusFilter(event.target.value as UserStatusFilter)}
+                  className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-accent"
+                >
+                  <option value="all">Tất cả</option>
+                  <option value="active">Hoạt động</option>
+                  <option value="locked">Đã khóa</option>
                 </select>
               </label>
             </div>
             <div className="mt-5 flex justify-end gap-2">
               <button
                 type="button"
-                onClick={() => setDraftRoleFilter("all")}
+                onClick={() => {
+                  setDraftRoleFilter("all");
+                  setDraftStatusFilter("all");
+                }}
                 className="rounded-lg border border-border bg-white px-4 py-2 text-sm font-medium text-foreground transition hover:bg-surface-muted"
               >
                 Xóa lọc
@@ -325,9 +561,96 @@ export function UsersTable() {
           </div>
         </div>
       ) : null}
+
+      {lockTarget ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4">
+          <div className="w-full max-w-md rounded-xl border border-border bg-white p-5 shadow-sm">
+            <h3 className="text-lg font-semibold text-foreground">Khóa tài khoản</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Bạn sắp khóa tài khoản <span className="font-semibold text-foreground">{lockTarget.displayName}</span> ({lockTarget.email}).
+            </p>
+            <div className="mt-4 space-y-4">
+              <label className="space-y-1.5 text-sm">
+                <span className="font-medium text-foreground">Lý do khóa <span className="text-red-600">*</span></span>
+                <textarea
+                  value={lockReason}
+                  onChange={(event) => setLockReason(event.target.value)}
+                  rows={3}
+                  placeholder="Vd: Vi phạm chính sách nội dung..."
+                  className="w-full resize-none rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-accent"
+                />
+              </label>
+              <label className="space-y-1.5 text-sm">
+                <span className="font-medium text-foreground">Khóa tới (để trống = vĩnh viễn)</span>
+                <input
+                  type="datetime-local"
+                  value={lockUntil}
+                  onChange={(event) => setLockUntil(event.target.value)}
+                  className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-accent"
+                />
+              </label>
+              {lockError ? (
+                <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{lockError}</p>
+              ) : null}
+            </div>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                disabled={lockSubmitting}
+                onClick={closeLockModal}
+                className="rounded-lg border border-border bg-white px-4 py-2 text-sm font-medium text-foreground transition hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                disabled={lockSubmitting}
+                onClick={() => void submitLock()}
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {lockSubmitting ? "Đang khóa..." : "Khóa tài khoản"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {unlockTarget ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4">
+          <div className="w-full max-w-md rounded-xl border border-border bg-white p-5 shadow-sm">
+            <h3 className="text-lg font-semibold text-foreground">Mở khóa tài khoản</h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Mở khóa tài khoản <span className="font-semibold text-foreground">{unlockTarget.displayName}</span> ({unlockTarget.email})? Người dùng có thể đăng nhập trở lại ngay sau khi mở khóa.
+            </p>
+            {unlockTarget.lockedReason ? (
+              <p className="mt-2 rounded-lg border border-border bg-surface-muted px-3 py-2 text-xs text-muted-foreground">
+                Lý do khóa hiện tại: {unlockTarget.lockedReason}
+              </p>
+            ) : null}
+            {unlockError ? (
+              <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{unlockError}</p>
+            ) : null}
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                disabled={unlockSubmitting}
+                onClick={closeUnlockModal}
+                className="rounded-lg border border-border bg-white px-4 py-2 text-sm font-medium text-foreground transition hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                disabled={unlockSubmitting}
+                onClick={() => void submitUnlock()}
+                className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {unlockSubmitting ? "Đang mở khóa..." : "Mở khóa"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }
-
-
-

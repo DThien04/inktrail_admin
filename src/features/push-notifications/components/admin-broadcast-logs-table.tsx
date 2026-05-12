@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Pagination } from "@/components/ui/pagination";
 import {
   getAdminBroadcastLogs,
@@ -63,9 +63,10 @@ function BroadcastLogHeaderButton({
 
 type AdminBroadcastLogsTableProps = {
   refreshKey: number;
+  toolbarAction?: ReactNode;
 };
 
-export function AdminBroadcastLogsTable({ refreshKey }: AdminBroadcastLogsTableProps) {
+export function AdminBroadcastLogsTable({ refreshKey, toolbarAction }: AdminBroadcastLogsTableProps) {
   const [items, setItems] = useState<AdminBroadcastLogItem[]>([]);
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -196,6 +197,7 @@ export function AdminBroadcastLogsTable({ refreshKey }: AdminBroadcastLogsTableP
               <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
             </svg>
           </button>
+          {toolbarAction ?? null}
         </div>
       </div>
       </section>

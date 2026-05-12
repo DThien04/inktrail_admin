@@ -6,10 +6,13 @@ import { ModalCloseButton } from "@/components/ui/modal-close-button";
 import { Pagination } from "@/components/ui/pagination";
 import {
   getAdminReports,
+  getUserViolationSummary,
+  lockReportCaseAuthor,
   processCriticalAdminReportCases,
   resolveAdminReportAppeal,
   restoreAdminReportCase,
   updateAdminReportStatus,
+  type AdminViolationSummary,
 } from "@/features/reports/services/reports-service";
 import type {
   AdminReportListItem,
@@ -25,6 +28,7 @@ const REPORT_TYPE_VALUES: AdminReportType[] = [
 
 type FilterStatus = "all" | "pending" | "resolved";
 type AppealFilterStatus = "pending" | "accepted" | "rejected";
+type AppealFilterSelection = "all" | "none" | AppealFilterStatus;
 type RiskPriority = "low" | "medium" | "high" | "critical";
 type ResolutionAction =
   | "ignored"
@@ -74,6 +78,7 @@ type ReportCase = {
     | "review_soon"
     | "review_urgent"
     | "remove_candidate"
+    | "account_lock_candidate"
     | null;
   aiCheckedAt: string | null;
   appealStatus: "pending" | "accepted" | "rejected" | null;
@@ -85,6 +90,8 @@ type ReportCase = {
   appealAiRecommendation: "accept" | "reject" | "review" | null;
   appealAiConfidence: number | null;
   appealAiCheckedAt: string | null;
+  accountLockApplied: boolean;
+  accountLockedUserId: string | null;
 };
 
 type ConfirmAction =
@@ -373,6 +380,7 @@ function getAiSuggestedActionLabel(
     | "review_soon"
     | "review_urgent"
     | "remove_candidate"
+    | "account_lock_candidate"
     | null,
 ) {
   switch (action) {
@@ -384,6 +392,8 @@ function getAiSuggestedActionLabel(
       return "Nên xem gấp";
     case "remove_candidate":
       return "Nghiêng về gỡ nội dung";
+    case "account_lock_candidate":
+      return "Đề xuất khóa tài khoản người đăng";
     case "review":
       return "Cần admin xem thêm";
     default:
@@ -661,6 +671,8 @@ function buildReportCases(items: AdminReportListItem[]): ReportCase[] {
           representative.caseAppealAiRecommendation ?? null,
         appealAiConfidence: representative.caseAppealAiConfidence ?? null,
         appealAiCheckedAt: representative.caseAppealAiCheckedAt ?? null,
+        accountLockApplied: Boolean(representative.caseAccountLockApplied),
+        accountLockedUserId: representative.caseAccountLockedUserId ?? null,
       };
     })
     .sort((left, right) => {
@@ -685,18 +697,28 @@ export function ReportsPanel() {
     DEFAULT_REPORT_SORT.direction,
   );
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedTypes, setSelectedTypes] = useState<AdminReportType[]>([]);
-  const [selectedStatuses, setSelectedStatuses] = useState<FilterStatus[]>([]);
-  const [selectedAppealStatuses, setSelectedAppealStatuses] = useState<
-    AppealFilterStatus[]
-  >([]);
-  const [selectedPriorities, setSelectedPriorities] = useState<RiskPriority[]>([]);
-  const [draftTypes, setDraftTypes] = useState<AdminReportType[]>([]);
-  const [draftStatuses, setDraftStatuses] = useState<FilterStatus[]>([]);
-  const [draftAppealStatuses, setDraftAppealStatuses] = useState<
-    AppealFilterStatus[]
-  >([]);
-  const [draftPriorities, setDraftPriorities] = useState<RiskPriority[]>([]);
+  const [selectedTypeFilter, setSelectedTypeFilter] = useState<
+    AdminReportType | "all"
+  >("all");
+  const [selectedWorkflowFilter, setSelectedWorkflowFilter] = useState<
+    "all" | "pending" | "resolved"
+  >("all");
+  const [selectedAppealFilter, setSelectedAppealFilter] =
+    useState<AppealFilterSelection>("all");
+  const [selectedPriorityFilter, setSelectedPriorityFilter] = useState<
+    RiskPriority | "all"
+  >("all");
+  const [draftTypeFilter, setDraftTypeFilter] = useState<AdminReportType | "all">(
+    "all",
+  );
+  const [draftWorkflowFilter, setDraftWorkflowFilter] = useState<
+    "all" | "pending" | "resolved"
+  >("all");
+  const [draftAppealFilter, setDraftAppealFilter] =
+    useState<AppealFilterSelection>("all");
+  const [draftPriorityFilter, setDraftPriorityFilter] = useState<
+    RiskPriority | "all"
+  >("all");
   const [items, setItems] = useState<AdminReportListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isReloading, setIsReloading] = useState(false);
@@ -706,6 +728,19 @@ export function ReportsPanel() {
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [lockAuthorTarget, setLockAuthorTarget] = useState<ReportCase | null>(null);
+  const [lockAuthorReason, setLockAuthorReason] = useState("");
+  const [lockAuthorUntil, setLockAuthorUntil] = useState("");
+  const [lockAuthorAlsoResolveContent, setLockAuthorAlsoResolveContent] =
+    useState(true);
+  const [lockAuthorSummary, setLockAuthorSummary] =
+    useState<AdminViolationSummary | null>(null);
+  const [lockAuthorSummaryLoading, setLockAuthorSummaryLoading] = useState(false);
+  const [lockAuthorSubmitting, setLockAuthorSubmitting] = useState(false);
+  const [lockAuthorError, setLockAuthorError] = useState<string | null>(null);
+  const [restoreUnlockUser, setRestoreUnlockUser] = useState(false);
+  const [criticalLockAuthor, setCriticalLockAuthor] = useState(false);
+  const [criticalLockReason, setCriticalLockReason] = useState("");
 
   const loadReports = useCallback(async ({
     reloading = false,
@@ -763,21 +798,23 @@ export function ReportsPanel() {
         normalizedSearchQuery.length === 0 ||
         getReportCaseSearchText(reportCase).includes(normalizedSearchQuery);
       const matchesType =
-        selectedTypes.length === 0 || selectedTypes.includes(reportCase.type);
-      const matchesStatus =
-        selectedStatuses.length === 0 ||
-        selectedStatuses.includes(reportCase.workflowStatus);
+        selectedTypeFilter === "all" || reportCase.type === selectedTypeFilter;
+      const matchesWorkflow =
+        selectedWorkflowFilter === "all" ||
+        reportCase.workflowStatus === selectedWorkflowFilter;
       const matchesAppealStatus =
-        selectedAppealStatuses.length === 0 ||
-        (reportCase.appealStatus !== null &&
-          selectedAppealStatuses.includes(reportCase.appealStatus));
+        selectedAppealFilter === "all" ||
+        (selectedAppealFilter === "none" && reportCase.appealStatus === null) ||
+        (selectedAppealFilter !== "all" &&
+          selectedAppealFilter !== "none" &&
+          reportCase.appealStatus === selectedAppealFilter);
       const matchesPriority =
-        selectedPriorities.length === 0 ||
-        selectedPriorities.includes(reportCase.priority);
+        selectedPriorityFilter === "all" ||
+        reportCase.priority === selectedPriorityFilter;
       return (
         matchesSearch &&
         matchesType &&
-        matchesStatus &&
+        matchesWorkflow &&
         matchesAppealStatus &&
         matchesPriority
       );
@@ -785,10 +822,10 @@ export function ReportsPanel() {
   }, [
     allCases,
     normalizedSearchQuery,
-    selectedAppealStatuses,
-    selectedPriorities,
-    selectedStatuses,
-    selectedTypes,
+    selectedAppealFilter,
+    selectedPriorityFilter,
+    selectedTypeFilter,
+    selectedWorkflowFilter,
   ]);
 
   const totalPages = Math.max(1, Math.ceil(reportCases.length / pageSize));
@@ -826,10 +863,10 @@ export function ReportsPanel() {
     setPage(1);
   }, [
     normalizedSearchQuery,
-    selectedAppealStatuses,
-    selectedPriorities,
-    selectedStatuses,
-    selectedTypes,
+    selectedAppealFilter,
+    selectedPriorityFilter,
+    selectedTypeFilter,
+    selectedWorkflowFilter,
   ]);
 
   useEffect(() => {
@@ -870,54 +907,23 @@ export function ReportsPanel() {
 
   const activeFilterCount = useMemo(() => {
     let count = 0;
-    if (normalizedSearchQuery.length > 0) count += 1;
-    if (selectedTypes.length > 0) count += 1;
-    if (selectedStatuses.length > 0) count += 1;
-    if (selectedAppealStatuses.length > 0) count += 1;
-    if (selectedPriorities.length > 0) count += 1;
+    if (selectedTypeFilter !== "all") count += 1;
+    if (selectedWorkflowFilter !== "all") count += 1;
+    if (selectedAppealFilter !== "all") count += 1;
+    if (selectedPriorityFilter !== "all") count += 1;
     return count;
   }, [
-    normalizedSearchQuery.length,
-    selectedAppealStatuses.length,
-    selectedPriorities.length,
-    selectedStatuses.length,
-    selectedTypes.length,
+    selectedAppealFilter,
+    selectedPriorityFilter,
+    selectedTypeFilter,
+    selectedWorkflowFilter,
   ]);
 
-  function toggleReportType(nextType: AdminReportType) {
-    setDraftTypes((current) => {
-      if (current.includes(nextType)) {
-        return current.filter((type) => type !== nextType);
-      }
-      return [...current, nextType];
-    });
-  }
-
-  function toggleStatus(nextStatus: Exclude<FilterStatus, "all">) {
-    setDraftStatuses((current) => {
-      if (current.includes(nextStatus)) {
-        return current.filter((status) => status !== nextStatus);
-      }
-      return [...current, nextStatus];
-    });
-  }
-
-  function toggleAppealStatus(nextStatus: AppealFilterStatus) {
-    setDraftAppealStatuses((current) => {
-      if (current.includes(nextStatus)) {
-        return current.filter((status) => status !== nextStatus);
-      }
-      return [...current, nextStatus];
-    });
-  }
-
-  function togglePriority(nextPriority: RiskPriority) {
-    setDraftPriorities((current) => {
-      if (current.includes(nextPriority)) {
-        return current.filter((priority) => priority !== nextPriority);
-      }
-      return [...current, nextPriority];
-    });
+  function clearDraftFilters() {
+    setDraftTypeFilter("all");
+    setDraftWorkflowFilter("all");
+    setDraftAppealFilter("all");
+    setDraftPriorityFilter("all");
   }
 
   function handleSort(nextSortKey: ReportSortKey) {
@@ -933,24 +939,21 @@ export function ReportsPanel() {
   }
 
   function resetFilters() {
-    setDraftTypes([]);
-    setDraftStatuses([]);
-    setDraftAppealStatuses([]);
-    setDraftPriorities([]);
-    setSelectedTypes([]);
-    setSelectedStatuses([]);
-    setSelectedAppealStatuses([]);
-    setSelectedPriorities([]);
+    clearDraftFilters();
+    setSelectedTypeFilter("all");
+    setSelectedWorkflowFilter("all");
+    setSelectedAppealFilter("all");
+    setSelectedPriorityFilter("all");
     setSearchQuery("");
     setPage(1);
     setIsFilterOpen(false);
   }
 
   function applyFilters() {
-    setSelectedTypes(draftTypes);
-    setSelectedStatuses(draftStatuses);
-    setSelectedAppealStatuses(draftAppealStatuses);
-    setSelectedPriorities(draftPriorities);
+    setSelectedTypeFilter(draftTypeFilter);
+    setSelectedWorkflowFilter(draftWorkflowFilter);
+    setSelectedAppealFilter(draftAppealFilter);
+    setSelectedPriorityFilter(draftPriorityFilter);
     setPage(1);
     setIsFilterOpen(false);
   }
@@ -1065,7 +1068,7 @@ export function ReportsPanel() {
       kind: "process_critical",
       title: "Xử lý tất cả vụ việc rất cao",
       description:
-        "Tất cả vụ việc đang chờ xử lý có mức ưu tiên rất cao sẽ được xử lý theo hành động mặc định: gỡ bình luận, ẩn chương hoặc ẩn truyện. Thao tác này gửi thông báo cho người liên quan.",
+        "Mỗi lượt xử lý tối đa 50 vụ rất cao đang chờ (chạy song song theo lô nhỏ để giữ tải ổn định). Hành động mặc định: gỡ bình luận, ẩn chương hoặc ẩn truyện và gửi thông báo cho người liên quan. Nếu còn vụ chưa xử lý, bạn có thể bấm tiếp.",
     });
   }
 
@@ -1081,6 +1084,7 @@ export function ReportsPanel() {
     try {
       const restoredItem = await restoreAdminReportCase(
         reportCase.representative.caseId,
+        { unlockUser: restoreUnlockUser && reportCase.accountLockApplied },
       );
       setItems((current) =>
         current.map((item) =>
@@ -1095,6 +1099,14 @@ export function ReportsPanel() {
                 caseAppealStatus: restoredItem.caseAppealStatus,
                 caseAppealResolvedAt: restoredItem.caseAppealResolvedAt,
                 caseAppealResolvedById: restoredItem.caseAppealResolvedById,
+                caseAccountLockApplied:
+                  restoreUnlockUser && reportCase.accountLockApplied
+                    ? false
+                    : item.caseAccountLockApplied,
+                caseAccountLockedUserId:
+                  restoreUnlockUser && reportCase.accountLockApplied
+                    ? null
+                    : item.caseAccountLockedUserId,
                 target:
                   item.target?.id === restoredItem.target?.id
                     ? restoredItem.target
@@ -1104,6 +1116,7 @@ export function ReportsPanel() {
         ),
       );
       setConfirmAction(null);
+      setRestoreUnlockUser(false);
     } catch (restoreError) {
       setDetailError(
         restoreError instanceof Error
@@ -1112,6 +1125,130 @@ export function ReportsPanel() {
       );
     } finally {
       setIsUpdatingStatus(false);
+    }
+  }
+
+  function getCaseOwner(reportCase: ReportCase) {
+    const item = reportCase.representative;
+    if (item.type === "chapter_comment") {
+      return item.target?.author ?? null;
+    }
+    if (item.type === "chapter") {
+      return item.target?.story?.author ?? item.target?.author ?? null;
+    }
+    return item.target?.author ?? null;
+  }
+
+  async function openLockAuthorModal(reportCase: ReportCase) {
+    if (!reportCase.representative.caseId) {
+      setDetailError("Không tìm thấy mã vụ việc để khóa người đăng.");
+      return;
+    }
+    if (reportCase.accountLockApplied) {
+      setDetailError("Người đăng nội dung này đã bị khóa từ vụ việc.");
+      return;
+    }
+    const owner = getCaseOwner(reportCase);
+    if (!owner?.id) {
+      setDetailError("Không xác định được tác giả của nội dung.");
+      return;
+    }
+
+    setLockAuthorTarget(reportCase);
+    setLockAuthorReason("");
+    setLockAuthorUntil("");
+    setLockAuthorAlsoResolveContent(true);
+    setLockAuthorError(null);
+    setLockAuthorSummary(null);
+    setLockAuthorSummaryLoading(true);
+
+    try {
+      const summary = await getUserViolationSummary(owner.id);
+      setLockAuthorSummary(summary);
+    } catch (summaryError) {
+      setLockAuthorError(
+        summaryError instanceof Error
+          ? summaryError.message
+          : "Không thể tải lịch sử vi phạm của người dùng.",
+      );
+    } finally {
+      setLockAuthorSummaryLoading(false);
+    }
+  }
+
+  function closeLockAuthorModal() {
+    if (lockAuthorSubmitting) return;
+    setLockAuthorTarget(null);
+    setLockAuthorReason("");
+    setLockAuthorUntil("");
+    setLockAuthorAlsoResolveContent(true);
+    setLockAuthorSummary(null);
+    setLockAuthorError(null);
+  }
+
+  async function submitLockAuthor() {
+    if (!lockAuthorTarget?.representative.caseId) return;
+    const trimmedReason = lockAuthorReason.trim();
+    if (!trimmedReason) {
+      setLockAuthorError("Vui lòng nhập lý do khóa tài khoản.");
+      return;
+    }
+    if (lockAuthorUntil) {
+      const parsed = new Date(lockAuthorUntil);
+      if (Number.isNaN(parsed.getTime())) {
+        setLockAuthorError("Thời hạn khóa không hợp lệ.");
+        return;
+      }
+      if (parsed.getTime() <= Date.now()) {
+        setLockAuthorError("Thời hạn khóa phải lớn hơn thời điểm hiện tại.");
+        return;
+      }
+    }
+
+    setLockAuthorSubmitting(true);
+    setLockAuthorError(null);
+    try {
+      const result = await lockReportCaseAuthor(
+        lockAuthorTarget.representative.caseId,
+        {
+          reason: trimmedReason,
+          lockedUntil: lockAuthorUntil
+            ? new Date(lockAuthorUntil).toISOString()
+            : null,
+          alsoResolveContent: lockAuthorAlsoResolveContent,
+        },
+      );
+
+      const lockedUserId = result.lockedUser?.id ?? null;
+      setItems((current) =>
+        current.map((item) =>
+          item.caseId === result.caseId
+            ? {
+                ...item,
+                caseAccountLockApplied: result.accountLockApplied,
+                caseAccountLockedUserId: lockedUserId,
+              }
+            : item,
+        ),
+      );
+
+      if (lockAuthorAlsoResolveContent) {
+        await loadReports({ reloading: true });
+      }
+
+      setLockAuthorTarget(null);
+      setLockAuthorReason("");
+      setLockAuthorUntil("");
+      setLockAuthorAlsoResolveContent(true);
+      setLockAuthorSummary(null);
+    } catch (lockError) {
+      setLockAuthorError(
+        lockError instanceof Error
+          ? lockError.message
+          : "Không thể khóa tài khoản người đăng.",
+      );
+    } finally {
+      setLockAuthorSubmitting(false);
     }
   }
 
@@ -1173,19 +1310,40 @@ export function ReportsPanel() {
   }
 
   async function processCriticalCases() {
+    if (criticalLockAuthor && !criticalLockReason.trim()) {
+      setError("Vui lòng nhập lý do khóa khi chọn khóa luôn người đăng.");
+      return;
+    }
+
     setIsUpdatingStatus(true);
     setError(null);
     setDetailError(null);
 
     try {
-      const result = await processCriticalAdminReportCases();
+      const result = await processCriticalAdminReportCases({
+        lockAuthor: criticalLockAuthor,
+        lockReason: criticalLockAuthor ? criticalLockReason.trim() : "",
+      });
       await loadReports({ reloading: true });
       setConfirmAction(null);
+      setCriticalLockAuthor(false);
+      setCriticalLockReason("");
 
-      if (result.failedCaseCount > 0) {
-        setError(
-          `Đã xử lý ${result.processedCaseCount} vụ việc rất cao, ${result.failedCaseCount} vụ việc lỗi.`,
+      const messages = [];
+      messages.push(`Đã xử lý ${result.processedCaseCount} vụ việc rất cao`);
+      if (result.lockedAuthorCount > 0) {
+        messages.push(`khóa ${result.lockedAuthorCount} tài khoản`);
+      }
+      if (result.remainingCriticalCount > 0) {
+        messages.push(
+          `còn ${result.remainingCriticalCount} vụ chưa xử lý, bấm tiếp để tiếp tục`,
         );
+      }
+      if (result.failedCaseCount > 0) {
+        messages.push(`${result.failedCaseCount} vụ việc lỗi`);
+      }
+      if (result.failedCaseCount > 0 || result.remainingCriticalCount > 0) {
+        setError(`${messages.join(", ")}.`);
       }
     } catch (processError) {
       setError(
@@ -1294,7 +1452,7 @@ export function ReportsPanel() {
         </div>
       </div>
 
-      <div className="relative space-y-4">
+      <div className="space-y-4">
         <div>
           <h2 className="text-lg font-semibold text-foreground">Danh sách báo cáo</h2>
         </div>
@@ -1349,17 +1507,15 @@ export function ReportsPanel() {
             <button
               type="button"
               onClick={() => {
-                if (!isFilterOpen) {
-                  setDraftTypes(selectedTypes);
-                  setDraftStatuses(selectedStatuses);
-                  setDraftAppealStatuses(selectedAppealStatuses);
-                  setDraftPriorities(selectedPriorities);
-                }
-                setIsFilterOpen((current) => !current);
+                setDraftTypeFilter(selectedTypeFilter);
+                setDraftWorkflowFilter(selectedWorkflowFilter);
+                setDraftAppealFilter(selectedAppealFilter);
+                setDraftPriorityFilter(selectedPriorityFilter);
+                setIsFilterOpen(true);
               }}
-              className="inline-flex items-center gap-2 rounded-xl border border-border bg-white px-4 py-2 text-sm font-semibold text-foreground shadow-sm transition hover:bg-surface-muted"
+              className="inline-flex items-center gap-2 rounded-lg border border-border bg-white px-4 py-2.5 text-sm font-medium text-foreground transition hover:bg-surface-muted"
             >
-              {"Bộ lọc"}
+              Bộ lọc
               <span className="rounded-full bg-surface-muted px-2 py-0.5 text-xs text-muted-foreground">
                 {activeFilterCount}
               </span>
@@ -1367,164 +1523,114 @@ export function ReportsPanel() {
             <button
               type="button"
               onClick={resetFilters}
-              className="inline-flex items-center rounded-xl border border-border bg-white px-4 py-2 text-sm font-semibold text-foreground shadow-sm transition hover:bg-surface-muted"
+              className="inline-flex items-center rounded-lg border border-border bg-white px-4 py-2.5 text-sm font-medium text-foreground transition hover:bg-surface-muted"
             >
-              {"Xóa lọc"}
+              Xóa lọc
             </button>
           </div>
         </div>
+      </div>
 
-        <div
-          className={
-            isFilterOpen
-              ? "absolute right-0 top-full z-20 mt-3 w-full max-w-md rounded-2xl border border-border bg-white p-5 shadow-lg"
-              : "hidden"
-          }
-        >
-          <div className="mb-5 flex flex-col gap-3 border-b border-border pb-4 md:flex-row md:items-start md:justify-between">
-            <div>
-              <p className="text-sm font-semibold text-foreground">{"Bộ lọc báo cáo"}</p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {"Lọc nhanh theo loại, trạng thái, kháng nghị và mức độ ưu tiên."}
-              </p>
-            </div>
-          </div>
-
-
-
-
-
-
-
-
-          <div className="space-y-4">
-            <div className="space-y-2 rounded-xl border border-border bg-surface-muted p-4">
-              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                {"Lo\u1ea1i"}
-              </p>
-              {REPORT_TYPE_VALUES.map((reportType) => {
-                const checked = draftTypes.includes(reportType);
-                return (
-                  <label
-                    key={reportType}
-                    className="flex cursor-pointer items-center gap-3 rounded-lg px-1 py-2 text-sm text-foreground transition hover:text-accent"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={() => toggleReportType(reportType)}
-                      className="h-4 w-4 rounded border-border text-accent focus:ring-accent"
-                    />
-                    <span>
+      {isFilterOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4">
+          <div className="w-full max-w-md rounded-xl border border-border bg-white p-5 shadow-sm">
+            <h3 className="text-lg font-semibold text-foreground">Bộ lọc báo cáo</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Lọc theo loại, trạng thái vụ việc, kháng nghị và mức độ ưu tiên.
+            </p>
+            <div className="mt-4 space-y-4">
+              <label className="space-y-1.5 text-sm">
+                <span className="font-medium text-foreground">Loại</span>
+                <select
+                  value={draftTypeFilter}
+                  onChange={(event) =>
+                    setDraftTypeFilter(event.target.value as AdminReportType | "all")
+                  }
+                  className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-accent"
+                >
+                  <option value="all">Tất cả</option>
+                  {REPORT_TYPE_VALUES.map((reportType) => (
+                    <option key={reportType} value={reportType}>
                       {getTypeLabel(reportType)}
-                    </span>
-                  </label>
-                );
-              })}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="space-y-1.5 text-sm">
+                <span className="font-medium text-foreground">Trạng thái vụ việc</span>
+                <select
+                  value={draftWorkflowFilter}
+                  onChange={(event) =>
+                    setDraftWorkflowFilter(
+                      event.target.value as "all" | "pending" | "resolved",
+                    )
+                  }
+                  className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-accent"
+                >
+                  <option value="all">Tất cả</option>
+                  <option value="pending">{getWorkflowStatusLabel("pending")}</option>
+                  <option value="resolved">{getWorkflowStatusLabel("resolved")}</option>
+                </select>
+              </label>
+              <label className="space-y-1.5 text-sm">
+                <span className="font-medium text-foreground">Kháng nghị</span>
+                <select
+                  value={draftAppealFilter}
+                  onChange={(event) =>
+                    setDraftAppealFilter(event.target.value as AppealFilterSelection)
+                  }
+                  className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-accent"
+                >
+                  <option value="all">Tất cả</option>
+                  <option value="none">Chưa có kháng nghị</option>
+                  <option value="pending">{getAppealFilterLabel("pending")}</option>
+                  <option value="accepted">{getAppealFilterLabel("accepted")}</option>
+                  <option value="rejected">{getAppealFilterLabel("rejected")}</option>
+                </select>
+              </label>
+              <label className="space-y-1.5 text-sm">
+                <span className="font-medium text-foreground">Ưu tiên</span>
+                <select
+                  value={draftPriorityFilter}
+                  onChange={(event) =>
+                    setDraftPriorityFilter(event.target.value as RiskPriority | "all")
+                  }
+                  className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-accent"
+                >
+                  <option value="all">Tất cả</option>
+                  <option value="low">{getPriorityLabel("low")}</option>
+                  <option value="medium">{getPriorityLabel("medium")}</option>
+                  <option value="high">{getPriorityLabel("high")}</option>
+                  <option value="critical">{getPriorityLabel("critical")}</option>
+                </select>
+              </label>
             </div>
-
-            <div className="space-y-2 rounded-xl border border-border bg-surface-muted p-4">
-              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                {"Trạng thái"}
-              </p>
-              {(["pending", "resolved"] as const).map((workflowStatus) => {
-                const checked = draftStatuses.includes(workflowStatus);
-                return (
-                  <label
-                    key={workflowStatus}
-                    className="flex cursor-pointer items-center gap-3 rounded-lg px-1 py-2 text-sm text-foreground transition hover:text-accent"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={() => toggleStatus(workflowStatus)}
-                      className="h-4 w-4 rounded border-border text-accent focus:ring-accent"
-                    />
-                    <span>
-                      {getWorkflowStatusLabel(workflowStatus)}
-                    </span>
-                  </label>
-                );
-              })}
-            </div>
-
-            <div className="space-y-2 rounded-xl border border-border bg-surface-muted p-4">
-              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                {"Kháng nghị"}
-              </p>
-              {(["pending", "accepted", "rejected"] as const).map(
-                (appealStatus) => {
-                  const checked = draftAppealStatuses.includes(appealStatus);
-                  return (
-                    <label
-                      key={appealStatus}
-                      className="flex cursor-pointer items-center gap-3 rounded-lg px-1 py-2 text-sm text-foreground transition hover:text-accent"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => toggleAppealStatus(appealStatus)}
-                        className="h-4 w-4 rounded border-border text-accent focus:ring-accent"
-                      />
-                      <span>{getAppealFilterLabel(appealStatus)}</span>
-                    </label>
-                  );
-                },
-              )}
-            </div>
-
-            <div className="space-y-2 rounded-xl border border-border bg-surface-muted p-4">
-              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                {"Ưu tiên"}
-              </p>
-              {(["low", "medium", "high", "critical"] as const).map((priority) => {
-                const checked = draftPriorities.includes(priority);
-                return (
-                  <label
-                    key={priority}
-                    className="flex cursor-pointer items-center gap-3 rounded-lg px-1 py-2 text-sm text-foreground transition hover:text-accent"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={() => togglePriority(priority)}
-                      className="h-4 w-4 rounded border-border text-accent focus:ring-accent"
-                    />
-                    <span>
-                      {getPriorityLabel(priority)}
-                    </span>
-                  </label>
-                );
-              })}
-            </div>
-
-            <div className="flex flex-wrap justify-end gap-2 border-t border-border pt-4">
+            <div className="mt-5 flex justify-end gap-2">
               <button
                 type="button"
-                onClick={resetFilters}
-                className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-foreground transition hover:bg-surface-muted"
+                onClick={clearDraftFilters}
+                className="rounded-lg border border-border bg-white px-4 py-2 text-sm font-medium text-foreground transition hover:bg-surface-muted"
               >
-                {"Xóa lọc"}
+                Xóa lọc
               </button>
               <button
                 type="button"
                 onClick={() => setIsFilterOpen(false)}
-                className="rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-foreground transition hover:bg-surface-muted"
+                className="rounded-lg border border-border bg-white px-4 py-2 text-sm font-medium text-foreground transition hover:bg-surface-muted"
               >
-                {"Hủy"}
+                Hủy
               </button>
               <button
                 type="button"
                 onClick={applyFilters}
-                className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90"
-                style={{ backgroundColor: "var(--accent)" }}
+                className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition hover:bg-accent-strong"
               >
-                {"Xác nhận"}
+                Áp dụng
               </button>
             </div>
           </div>
         </div>
-      </div>
+      ) : null}
 
       <div className="data-card overflow-hidden">
         <div className="grid grid-cols-[1.8fr_0.8fr_1fr_1fr_1fr_0.8fr] gap-4 border-b border-border bg-surface-muted px-5 py-3 text-sm font-medium text-muted-foreground">
@@ -1641,6 +1747,11 @@ export function ReportsPanel() {
                   {reportCase.restoredAt ? (
                     <p className="mt-1 text-xs font-medium text-emerald-700">
                       Đã khôi phục
+                    </p>
+                  ) : null}
+                  {reportCase.accountLockApplied ? (
+                    <p className="mt-1 inline-flex items-center rounded-md border border-red-200 bg-red-50 px-1.5 py-0.5 text-[10px] font-semibold text-red-700">
+                      Đã khóa người đăng
                     </p>
                   ) : null}
                 </div>
@@ -1931,6 +2042,16 @@ export function ReportsPanel() {
                           >
                         Gỡ bình luận
                           </button>
+                          {!selectedCase.accountLockApplied ? (
+                            <button
+                              type="button"
+                              disabled={isUpdatingStatus}
+                              onClick={() => void openLockAuthorModal(selectedCase)}
+                              className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              Khóa tài khoản
+                            </button>
+                          ) : null}
                         </div>
                       ) : selectedCase.type === "chapter" ? (
                         <div className="flex flex-wrap gap-2">
@@ -1950,6 +2071,16 @@ export function ReportsPanel() {
                           >
                         Ẩn chương
                           </button>
+                          {!selectedCase.accountLockApplied ? (
+                            <button
+                              type="button"
+                              disabled={isUpdatingStatus}
+                              onClick={() => void openLockAuthorModal(selectedCase)}
+                              className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              Khóa tài khoản
+                            </button>
+                          ) : null}
                         </div>
                       ) : (
                         <div className="flex flex-wrap gap-2">
@@ -1969,31 +2100,60 @@ export function ReportsPanel() {
                           >
                         Ẩn truyện
                           </button>
+                          {!selectedCase.accountLockApplied ? (
+                            <button
+                              type="button"
+                              disabled={isUpdatingStatus}
+                              onClick={() => void openLockAuthorModal(selectedCase)}
+                              className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              Khóa tài khoản
+                            </button>
+                          ) : null}
                         </div>
                       )
                     ) : (
                       <div className="flex flex-col gap-3 rounded-lg border border-border bg-surface-muted px-4 py-3 text-sm text-muted-foreground md:flex-row md:items-center md:justify-between">
-                        <div>
-                          Vụ việc này đã được xử lý.
-                          <span className="font-medium text-foreground">
-                            {" "}Kết quả: {getResolutionActionLabel(selectedCase.resolutionAction, selectedCase.type)}.
-                          </span>
-                          {selectedCase.restoredAt ? (
-                            <span>
-                              {" "}Đã khôi phục vào {formatDate(selectedCase.restoredAt)}.
+                        <div className="space-y-1">
+                          <div>
+                            Vụ việc này đã được xử lý.
+                            <span className="font-medium text-foreground">
+                              {" "}Kết quả: {getResolutionActionLabel(selectedCase.resolutionAction, selectedCase.type)}.
                             </span>
+                            {selectedCase.restoredAt ? (
+                              <span>
+                                {" "}Đã khôi phục vào {formatDate(selectedCase.restoredAt)}.
+                              </span>
+                            ) : null}
+                          </div>
+                          {selectedCase.accountLockApplied ? (
+                            <p className="inline-flex items-center gap-1 rounded-md border border-red-200 bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-700">
+                              Đã khóa tài khoản người đăng
+                            </p>
                           ) : null}
                         </div>
-                        {canRestoreReportCase(selectedCase) ? (
-                          <button
-                            type="button"
-                            disabled={isUpdatingStatus}
-                            onClick={() => openConfirmRestore(selectedCase)}
-                            className="min-w-[92px] whitespace-nowrap rounded-lg border border-border bg-white px-4 py-2 text-sm font-medium text-foreground transition hover:bg-white/80 disabled:cursor-not-allowed disabled:opacity-60"
-                          >
-                            Khôi phục
-                          </button>
-                        ) : null}
+                        <div className="flex flex-wrap items-center gap-2">
+                          {!selectedCase.accountLockApplied ? (
+                            <button
+                              type="button"
+                              disabled={isUpdatingStatus}
+                              onClick={() => void openLockAuthorModal(selectedCase)}
+                              className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              Khóa tài khoản
+                            </button>
+                          ) : null}
+                          {canRestoreReportCase(selectedCase) ? (
+                            <button
+                              type="button"
+                              disabled={isUpdatingStatus}
+                              onClick={() => openConfirmRestore(selectedCase)}
+                              className="min-w-[92px] whitespace-nowrap rounded-lg border border-border bg-white px-4 py-2 text-sm font-medium text-foreground transition hover:bg-white/80 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              Khôi phục
+                            </button>
+                          ) : null}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -2139,10 +2299,68 @@ export function ReportsPanel() {
               {confirmAction.description}
             </p>
 
+            {confirmAction.kind === "restore" &&
+            (() => {
+              const restoreCaseTarget = allCases.find(
+                (item) => item.key === confirmAction.caseKey,
+              );
+              return restoreCaseTarget?.accountLockApplied ? (
+                <label className="mt-4 flex items-start gap-2 rounded-lg border border-border bg-surface-muted px-3 py-2 text-sm text-foreground">
+                  <input
+                    type="checkbox"
+                    checked={restoreUnlockUser}
+                    onChange={(event) => setRestoreUnlockUser(event.target.checked)}
+                    className="mt-0.5 h-4 w-4"
+                  />
+                  <span>
+                    Đồng thời mở khóa tài khoản người đăng đã bị khóa do vụ việc này.
+                  </span>
+                </label>
+              ) : null;
+            })()}
+
+            {confirmAction.kind === "process_critical" ? (
+              <div className="mt-4 space-y-3">
+                <label className="flex items-start gap-2 rounded-lg border border-border bg-surface-muted px-3 py-2 text-sm text-foreground">
+                  <input
+                    type="checkbox"
+                    checked={criticalLockAuthor}
+                    onChange={(event) =>
+                      setCriticalLockAuthor(event.target.checked)
+                    }
+                    className="mt-0.5 h-4 w-4"
+                  />
+                  <span>
+                    Đồng thời khóa vĩnh viễn tài khoản người đăng của tất cả các
+                    vụ việc rất cao trong lượt xử lý này.
+                  </span>
+                </label>
+                {criticalLockAuthor ? (
+                  <label className="space-y-1.5 text-sm">
+                    <span className="font-medium text-foreground">
+                      Lý do khóa hàng loạt <span className="text-red-600">*</span>
+                    </span>
+                    <textarea
+                      value={criticalLockReason}
+                      onChange={(event) =>
+                        setCriticalLockReason(event.target.value)
+                      }
+                      rows={3}
+                      placeholder="Vd: Tài khoản đăng nội dung vi phạm nghiêm trọng và đã bị xác nhận ở mức ưu tiên rất cao."
+                      className="w-full resize-none rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-accent"
+                    />
+                  </label>
+                ) : null}
+              </div>
+            ) : null}
+
             <div className="mt-5 flex justify-end gap-2">
               <button
                 type="button"
-                onClick={() => setConfirmAction(null)}
+                onClick={() => {
+                  setConfirmAction(null);
+                  setRestoreUnlockUser(false);
+                }}
                 disabled={isUpdatingStatus}
                 className="rounded-lg border border-border bg-white px-4 py-2 text-sm font-medium text-foreground transition hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-60"
               >
@@ -2155,6 +2373,123 @@ export function ReportsPanel() {
                 className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-60"
               >
                   {isUpdatingStatus ? "Đang xử lý..." : "Xác nhận"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {lockAuthorTarget ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4">
+          <div className="w-full max-w-lg rounded-xl border border-border bg-white p-5 shadow-sm">
+            <h3 className="text-lg font-semibold text-foreground">
+              Khóa tài khoản người đăng
+            </h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Tài khoản{" "}
+              <span className="font-semibold text-foreground">
+                {lockAuthorSummary?.user.displayName ||
+                  getCaseOwner(lockAuthorTarget)?.displayName ||
+                  "?"}
+              </span>{" "}
+              ({lockAuthorSummary?.user.email ||
+                getCaseOwner(lockAuthorTarget)?.email ||
+                "?"}) sẽ bị chặn đăng nhập.
+            </p>
+
+            <div className="mt-3 rounded-lg border border-border bg-surface-muted px-3 py-2 text-xs text-muted-foreground">
+              {lockAuthorSummaryLoading ? (
+                <span>Đang tải lịch sử vi phạm...</span>
+              ) : lockAuthorSummary ? (
+                <div className="space-y-1">
+                  <p>
+                    Lịch sử vi phạm:{" "}
+                    <span className="font-semibold text-foreground">
+                      {lockAuthorSummary.counts.totalContentViolations}
+                    </span>{" "}
+                    nội dung từng bị xử lý ({lockAuthorSummary.counts.storiesHidden}{" "}
+                    truyện ẩn, {lockAuthorSummary.counts.chaptersHidden} chương ẩn,{" "}
+                    {lockAuthorSummary.counts.commentsRemoved} bình luận bị gỡ).
+                  </p>
+                  <p>
+                    Số lần đã bị khóa qua report:{" "}
+                    <span className="font-semibold text-foreground">
+                      {lockAuthorSummary.counts.accountLockCases}
+                    </span>
+                    .
+                  </p>
+                  {lockAuthorSummary.user.isLocked ? (
+                    <p className="text-red-700">
+                      Tài khoản hiện đang bị khóa. Khóa lại sẽ ghi đè lý do/thời hạn cũ.
+                    </p>
+                  ) : null}
+                </div>
+              ) : (
+                <span>Không tải được lịch sử vi phạm.</span>
+              )}
+            </div>
+
+            <div className="mt-4 space-y-4">
+              <label className="space-y-1.5 text-sm">
+                <span className="font-medium text-foreground">
+                  Lý do khóa <span className="text-red-600">*</span>
+                </span>
+                <textarea
+                  value={lockAuthorReason}
+                  onChange={(event) => setLockAuthorReason(event.target.value)}
+                  rows={3}
+                  placeholder="Vd: Đăng nội dung vi phạm chính sách nội dung lặp lại..."
+                  className="w-full resize-none rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-accent"
+                />
+              </label>
+              <label className="space-y-1.5 text-sm">
+                <span className="font-medium text-foreground">
+                  Khóa tới (để trống = vĩnh viễn)
+                </span>
+                <input
+                  type="datetime-local"
+                  value={lockAuthorUntil}
+                  onChange={(event) => setLockAuthorUntil(event.target.value)}
+                  className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-accent"
+                />
+              </label>
+              <label className="flex items-start gap-2 text-sm text-foreground">
+                <input
+                  type="checkbox"
+                  checked={lockAuthorAlsoResolveContent}
+                  onChange={(event) =>
+                    setLockAuthorAlsoResolveContent(event.target.checked)
+                  }
+                  className="mt-0.5 h-4 w-4"
+                />
+                <span>
+                  Đồng thời {lockAuthorTarget.type === "chapter_comment" ? "gỡ" : "ẩn"}{" "}
+                  nội dung của vụ việc này.
+                </span>
+              </label>
+              {lockAuthorError ? (
+                <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                  {lockAuthorError}
+                </p>
+              ) : null}
+            </div>
+
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                disabled={lockAuthorSubmitting}
+                onClick={closeLockAuthorModal}
+                className="rounded-lg border border-border bg-white px-4 py-2 text-sm font-medium text-foreground transition hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                disabled={lockAuthorSubmitting}
+                onClick={() => void submitLockAuthor()}
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {lockAuthorSubmitting ? "Đang khóa..." : "Khóa tài khoản"}
               </button>
             </div>
           </div>

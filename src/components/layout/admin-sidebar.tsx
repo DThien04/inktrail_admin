@@ -1,8 +1,9 @@
 ﻿"use client";
 
+import { Fragment } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { getNavItemsByRole } from "@/lib/constants/routes";
+import { getNavItemsByRole, type AdminNavIconKey } from "@/lib/constants/routes";
 import type { AuthUser } from "@/features/auth/types";
 
 type AdminSidebarProps = {
@@ -10,16 +11,7 @@ type AdminSidebarProps = {
   role?: AuthUser["role"];
 };
 
-type NavIconKey =
-  | "dashboard"
-  | "stories"
-  | "reports"
-  | "chapters"
-  | "tags"
-  | "users"
-  | "push";
-
-function NavIcon({ icon, active }: { icon: NavIconKey; active: boolean }) {
+function NavIcon({ icon, active }: { icon: AdminNavIconKey; active: boolean }) {
   const color = active ? "text-white" : "text-muted-foreground";
   const common = `h-[18px] w-[18px] ${color}`;
 
@@ -69,6 +61,14 @@ function NavIcon({ icon, active }: { icon: NavIconKey; active: boolean }) {
           <path d="M4 16c1.3-2.4 3.5-3.6 6-3.6S14.7 13.6 16 16" strokeLinecap="round" />
         </svg>
       );
+    case "appeals":
+      return (
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" className={common}>
+          <rect x="3.5" y="4" width="13" height="12" rx="2" />
+          <path d="M7 8.5h6M7 11.5h4" strokeLinecap="round" />
+          <circle cx="14" cy="13.5" r="2" fill="currentColor" stroke="none" />
+        </svg>
+      );
     case "push":
       return (
         <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" className={common}>
@@ -107,22 +107,36 @@ export function AdminSidebar({ isOpen, role }: AdminSidebarProps) {
       </div>
 
       <nav className="mt-4 space-y-1">
-        {navItems.map((item) => {
+        {navItems.map((item, index) => {
           const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+          const showGroupHeading = isOpen && Boolean(item.group);
+          const showCollapsedDivider = !isOpen && Boolean(item.group) && index > 0;
+
           return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center ${isOpen ? "gap-2.5 justify-start" : "justify-center"} rounded-lg border px-3 py-2.5 text-sm transition ${
-                isActive
-                  ? "border-accent bg-accent text-white"
-                  : "border-transparent text-foreground hover:border-border hover:bg-surface-muted"
-              }`}
-              title={item.label}
-            >
-              <NavIcon icon={item.icon} active={isActive} />
-              {isOpen ? <span>{item.label}</span> : null}
-            </Link>
+            <Fragment key={item.href}>
+              {showGroupHeading ? (
+                <div className={`px-3 ${index > 0 ? "mt-3" : ""}`}>
+                  <p className="text-xs font-semibold text-muted-foreground">
+                    {item.group}
+                  </p>
+                </div>
+              ) : null}
+              {showCollapsedDivider ? (
+                <div className="mx-2 my-2 h-px bg-border/80" aria-hidden />
+              ) : null}
+              <Link
+                href={item.href}
+                className={`flex items-center ${isOpen ? "gap-2.5 justify-start" : "justify-center"} rounded-lg border px-3 py-2.5 text-sm transition ${
+                  isActive
+                    ? "border-accent bg-accent text-white"
+                    : "border-transparent text-foreground hover:border-border hover:bg-surface-muted"
+                }`}
+                title={item.label}
+              >
+                <NavIcon icon={item.icon} active={isActive} />
+                {isOpen ? <span>{item.label}</span> : null}
+              </Link>
+            </Fragment>
           );
         })}
       </nav>

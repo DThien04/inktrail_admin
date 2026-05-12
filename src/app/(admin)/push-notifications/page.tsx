@@ -17,17 +17,19 @@ export default function PushNotificationsPage() {
       <PageSectionHeader
         title="Gửi thông báo"
         description="Gửi một tin chung tới mọi người dùng trong ứng dụng (tin trong app và thông báo trên thiết bị khi có)."
-        action={
+      />
+      <AdminBroadcastLogsTable
+        refreshKey={logsRefreshKey}
+        toolbarAction={
           <button
             type="button"
             onClick={() => setSendModalOpen(true)}
-            className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition hover:bg-accent-strong"
+            className="inline-flex items-center rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-white transition hover:bg-accent-strong"
           >
             Gửi thông báo mới
           </button>
         }
       />
-      <AdminBroadcastLogsTable refreshKey={logsRefreshKey} />
       <AdminPushSendModal
         open={sendModalOpen}
         onClose={() => setSendModalOpen(false)}

@@ -638,7 +638,7 @@ export function ChaptersManager() {
                     onSort={toggleSort}
                   />
                 </th>
-                <th className="px-4 py-3 font-semibold">AI kiểm duyệt</th>
+                <th className="px-4 py-3 font-semibold">Kiểm duyệt</th>
                 <th className="px-4 py-3 font-semibold">
                   <ChapterTableHeaderButton
                     label="Xuất bản"

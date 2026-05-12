@@ -18,7 +18,8 @@ export type AdminReportAiSuggestedAction =
   | "review"
   | "review_soon"
   | "review_urgent"
-  | "remove_candidate";
+  | "remove_candidate"
+  | "account_lock_candidate";
 
 export type AdminReportListItem = {
   id: string;
@@ -35,6 +36,8 @@ export type AdminReportListItem = {
   caseLastReportedAt: string | null;
   caseRestoredAt: string | null;
   caseRestoredById: string | null;
+  caseAccountLockApplied: boolean;
+  caseAccountLockedUserId: string | null;
   caseAiFlagged: boolean;
   caseAiCategories: string[] | null;
   caseAiConfidence: number | null;
