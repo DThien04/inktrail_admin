@@ -18,18 +18,29 @@ function mapTag(item: AdminTagListResponse["items"][number]): AdminTagItem {
   };
 }
 
+export type AdminTagSortKey =
+  | "name"
+  | "usage_count"
+  | "updated_at"
+  | "created_at";
+export type AdminTagSortOrder = "asc" | "desc";
+
 export async function getAdminTags({
   keyword,
   groupId,
   ungroupedOnly,
   page,
   pageSize,
+  sortBy,
+  sortOrder,
 }: {
   keyword?: string;
   groupId?: string;
   ungroupedOnly?: boolean;
   page: number;
   pageSize: number;
+  sortBy?: AdminTagSortKey;
+  sortOrder?: AdminTagSortOrder;
 }) {
   const params = new URLSearchParams();
   if (keyword?.trim()) params.set("keyword", keyword.trim());
@@ -37,6 +48,8 @@ export async function getAdminTags({
   if (ungroupedOnly) params.set("ungrouped_only", "true");
   params.set("page", String(page));
   params.set("page_size", String(pageSize));
+  if (sortBy) params.set("sort_by", sortBy);
+  if (sortOrder) params.set("sort_order", sortOrder);
 
   const suffix = params.toString() ? `?${params.toString()}` : "";
   const response = await apiClient.get<AdminTagListResponse>(`/tags/admin${suffix}`);
@@ -57,19 +70,36 @@ function mapGroup(item: AdminTagGroupListResponse["items"][number]): AdminTagGro
   };
 }
 
+export type AdminTagGroupSortKey =
+  | "name"
+  | "tag_count"
+  | "updated_at"
+  | "created_at";
+export type AdminTagGroupSortOrder = "asc" | "desc";
+export type AdminTagGroupTagFilter = "all" | "empty" | "non_empty";
+
 export async function getAdminTagGroups({
   keyword,
   page,
   pageSize,
+  sortBy,
+  sortOrder,
+  tagFilter,
 }: {
   keyword?: string;
   page: number;
   pageSize: number;
+  sortBy?: AdminTagGroupSortKey;
+  sortOrder?: AdminTagGroupSortOrder;
+  tagFilter?: AdminTagGroupTagFilter;
 }) {
   const params = new URLSearchParams();
   if (keyword?.trim()) params.set("keyword", keyword.trim());
   params.set("page", String(page));
   params.set("page_size", String(pageSize));
+  if (sortBy) params.set("sort_by", sortBy);
+  if (sortOrder) params.set("sort_order", sortOrder);
+  if (tagFilter && tagFilter !== "all") params.set("tag_filter", tagFilter);
   const suffix = params.toString() ? `?${params.toString()}` : "";
   const response = await apiClient.get<AdminTagGroupListResponse>(`/tag-groups/admin${suffix}`);
   return {

@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminModalLayer } from "@/components/ui/admin-modal-layer";
 import { ModalCloseButton } from "@/components/ui/modal-close-button";
 import { AdminPushForm } from "@/features/push-notifications/components/admin-push-form";
 import type { AdminPushResponse } from "@/features/push-notifications/services/admin-push-service";
@@ -14,7 +15,7 @@ export function AdminPushSendModal({ open, onClose, onSent }: AdminPushSendModal
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-auto bg-black/30 px-4 py-8">
+    <AdminModalLayer placement="scrollTop" overlayClassName="py-8">
       <div className="relative w-full max-w-lg rounded-xl border border-border bg-white p-5 shadow-sm">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -34,6 +35,6 @@ export function AdminPushSendModal({ open, onClose, onSent }: AdminPushSendModal
           />
         </div>
       </div>
-    </div>
+    </AdminModalLayer>
   );
 }

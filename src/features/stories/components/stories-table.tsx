@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { AdminModalLayer } from "@/components/ui/admin-modal-layer";
 import { ModalCloseButton } from "@/components/ui/modal-close-button";
 import { Pagination } from "@/components/ui/pagination";
 import { Toast } from "@/components/ui/toast";
@@ -374,7 +375,7 @@ export function StoriesTable() {
       </div>
 
       {isFilterOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4">
+        <AdminModalLayer>
           <div className="w-full max-w-md rounded-xl border border-border bg-white p-5 shadow-sm">
             <h3 className="text-lg font-semibold text-foreground">Bộ lọc truyện</h3>
             <div className="mt-4">
@@ -394,11 +395,11 @@ export function StoriesTable() {
               <button type="button" onClick={applyFilters} className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition hover:bg-accent-strong">Áp dụng</button>
             </div>
           </div>
-        </div>
+        </AdminModalLayer>
       ) : null}
 
       {modalMode === "create" || (modalMode === "edit" && activeStory && editForm) ? (
-        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-auto bg-black/30 px-4 py-6">
+        <AdminModalLayer placement="scrollTop" overlayClassName="py-6">
           <div className="w-full max-w-6xl">
             <StoryCreatePanel
               key={modalMode === "edit" && activeStory ? activeStory.id : "create"}
@@ -419,11 +420,11 @@ export function StoriesTable() {
               }}
             />
           </div>
-        </div>
+        </AdminModalLayer>
       ) : null}
 
       {modalMode === "detail" && activeStory ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4">
+        <AdminModalLayer>
           <div className="w-full max-w-3xl rounded-xl border border-border bg-white p-5 shadow-sm">
             <div className="flex items-start justify-between gap-3">
               <h3 className="text-lg font-semibold text-foreground">Chi tiết truyện</h3>
@@ -445,7 +446,7 @@ export function StoriesTable() {
               <p className="mt-1 whitespace-pre-wrap text-foreground">{activeStory.description || "Chua co mo ta."}</p>
             </div>
           </div>
-        </div>
+        </AdminModalLayer>
       ) : null}
 
       <Toast

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { AdminModalLayer } from "@/components/ui/admin-modal-layer";
 import { Pagination } from "@/components/ui/pagination";
 import { Toast } from "@/components/ui/toast";
 import {
@@ -515,7 +516,7 @@ export function LockAppealsTable() {
       </div>
 
       {isFilterOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4">
+        <AdminModalLayer>
           <div className="w-full max-w-md rounded-xl border border-border bg-white p-5 shadow-sm">
             <h3 className="text-lg font-semibold text-foreground">
               Bộ lọc khiếu nại
@@ -561,11 +562,11 @@ export function LockAppealsTable() {
               </button>
             </div>
           </div>
-        </div>
+        </AdminModalLayer>
       ) : null}
 
       {pendingAction ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4">
+        <AdminModalLayer>
           <div className="w-full max-w-md rounded-xl border border-border bg-white p-5 shadow-sm">
             <h3 className="text-lg font-semibold text-foreground">
               {pendingAction.action === "accept"
@@ -617,7 +618,7 @@ export function LockAppealsTable() {
               </button>
             </div>
           </div>
-        </div>
+        </AdminModalLayer>
       ) : null}
     </section>
   );

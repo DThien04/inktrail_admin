@@ -2,6 +2,7 @@
 
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { AdminModalLayer } from "@/components/ui/admin-modal-layer";
 import { ModalCloseButton } from "@/components/ui/modal-close-button";
 import { Pagination } from "@/components/ui/pagination";
 import { Toast } from "@/components/ui/toast";
@@ -761,7 +762,7 @@ export function ChaptersManager() {
       </div>
 
       {isFilterOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4">
+        <AdminModalLayer>
           <div className="w-full max-w-md rounded-xl border border-border bg-white p-5 shadow-sm">
             <h3 className="text-lg font-semibold text-foreground">Bộ lọc chương</h3>
             <p className="mt-1 text-sm text-muted-foreground">Lọc danh sách theo trạng thái hiển thị.</p>
@@ -803,11 +804,11 @@ export function ChaptersManager() {
               </button>
             </div>
           </div>
-        </div>
+        </AdminModalLayer>
       ) : null}
 
       {activeModalMode ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4">
+        <AdminModalLayer>
           <div className="max-h-[92vh] w-full max-w-5xl overflow-auto rounded-xl border border-border bg-white p-5 shadow-sm">
             <div className="flex items-start justify-between gap-3">
               <div>
@@ -902,11 +903,11 @@ export function ChaptersManager() {
               </div>
             ) : null}
           </div>
-        </div>
+        </AdminModalLayer>
       ) : null}
 
       {confirmAction ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4">
+        <AdminModalLayer>
           <div className="w-full max-w-md rounded-xl border border-border bg-white p-5 shadow-sm">
             <h3 className="text-lg font-semibold text-foreground">
               {confirmAction.kind === "delete"
@@ -941,7 +942,7 @@ export function ChaptersManager() {
               </button>
             </div>
           </div>
-        </div>
+        </AdminModalLayer>
       ) : null}
 
       <Toast

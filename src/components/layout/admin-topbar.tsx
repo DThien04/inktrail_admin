@@ -2,13 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { io, type Socket } from "socket.io-client";
 import { getAccessToken } from "@/features/auth/storage";
 import type { AuthUser } from "@/features/auth/types";
 import { apiClient } from "@/lib/api/client";
 import { env } from "@/lib/config/env";
 import { getNavItemsByRole } from "@/lib/constants/routes";
+import { AdminModalLayer } from "@/components/ui/admin-modal-layer";
+import { ModalCloseButton } from "@/components/ui/modal-close-button";
+import { Toast } from "@/components/ui/toast";
 
 type AdminTopbarProps = {
   isSidebarOpen: boolean;
@@ -84,6 +87,92 @@ function BellIcon() {
   );
 }
 
+function EyeIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M2 12s4.5-7 10-7 10 7 10 7-4.5 7-10 7S2 12 2 12z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
+function EyeOffIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M3 3l18 18" />
+      <path d="M10.58 10.58a3 3 0 1 0 4.24 4.24" />
+      <path d="M9.88 9.88A9.9 9.9 0 002.5 12c.83 2 4.27 6.5 9.5 6.5 1.52 0 3-.4 4.33-1.15" />
+      <path d="M14.12 14.12A9.9 9.9 0 0021.5 12c-.83-2-4.27-6.5-9.5-6.5-1.52 0-3 .4-4.33 1.15" />
+    </svg>
+  );
+}
+
+type PasswordRevealFieldProps = {
+  label: string;
+  value: string;
+  onChange: (next: string) => void;
+  visible: boolean;
+  onToggleVisible: () => void;
+  disabled: boolean;
+  autoComplete: string;
+  hint?: string;
+};
+
+function PasswordRevealField({
+  label,
+  value,
+  onChange,
+  visible,
+  onToggleVisible,
+  disabled,
+  autoComplete,
+  hint,
+}: PasswordRevealFieldProps) {
+  return (
+    <div className="space-y-1.5 text-sm">
+      <span className="font-medium text-foreground">{label}</span>
+      <div className="relative">
+        <input
+          type={visible ? "text" : "password"}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          autoComplete={autoComplete}
+          disabled={disabled}
+          className="w-full rounded-lg border border-border bg-white py-2 pl-3 pr-10 text-sm text-foreground focus:border-accent focus:outline-none disabled:opacity-60"
+        />
+        <button
+          type="button"
+          onClick={onToggleVisible}
+          disabled={disabled}
+          className="absolute right-1 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition hover:bg-surface-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
+          aria-label={visible ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+        >
+          {visible ? <EyeOffIcon /> : <EyeIcon />}
+        </button>
+      </div>
+      {hint ? <span className="block text-xs text-muted-foreground">{hint}</span> : null}
+    </div>
+  );
+}
+
 export function AdminTopbar({
   isSidebarOpen,
   onToggleSidebar,
@@ -96,6 +185,97 @@ export function AdminTopbar({
   const [isLoadingNotifications, setIsLoadingNotifications] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
+  const [oldPassword, setOldPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showOldPassword, setShowOldPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isSubmittingPassword, setIsSubmittingPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState("");
+  const [passwordToast, setPasswordToast] = useState<{
+    title: string;
+    message: string;
+    variant: "success" | "error";
+  } | null>(null);
+
+  function resetPasswordForm() {
+    setOldPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+    setShowOldPassword(false);
+    setShowNewPassword(false);
+    setShowConfirmPassword(false);
+    setPasswordError("");
+    setIsSubmittingPassword(false);
+  }
+
+  function openChangePassword() {
+    resetPasswordForm();
+    setIsUserMenuOpen(false);
+    setIsChangePasswordOpen(true);
+  }
+
+  function closeChangePassword() {
+    if (isSubmittingPassword) return;
+    setIsChangePasswordOpen(false);
+    resetPasswordForm();
+  }
+
+  async function submitChangePassword(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (isSubmittingPassword) return;
+
+    const oldValue = oldPassword.trim();
+    const newValue = newPassword.trim();
+    const confirmValue = confirmPassword.trim();
+
+    if (!oldValue || !newValue || !confirmValue) {
+      setPasswordError("Vui lòng nhập đầy đủ các trường.");
+      return;
+    }
+    if (newValue.length < 6) {
+      setPasswordError("Mật khẩu mới tối thiểu 6 ký tự.");
+      return;
+    }
+    if (newValue === oldValue) {
+      setPasswordError("Mật khẩu mới phải khác mật khẩu hiện tại.");
+      return;
+    }
+    if (newValue !== confirmValue) {
+      setPasswordError("Xác nhận mật khẩu mới không khớp.");
+      return;
+    }
+
+    setPasswordError("");
+    setIsSubmittingPassword(true);
+    try {
+      await apiClient.patch("/profile/me/password", {
+        body: {
+          old_password: oldValue,
+          new_password: newValue,
+          confirm_new_password: confirmValue,
+        },
+      });
+      setIsChangePasswordOpen(false);
+      resetPasswordForm();
+      setPasswordToast({
+        title: "Đã đổi mật khẩu",
+        message:
+          "Mật khẩu của bạn đã được cập nhật. Lần đăng nhập tiếp theo hãy dùng mật khẩu mới.",
+        variant: "success",
+      });
+    } catch (error) {
+      setPasswordError(
+        error instanceof Error
+          ? error.message
+          : "Không thể đổi mật khẩu. Vui lòng thử lại.",
+      );
+    } finally {
+      setIsSubmittingPassword(false);
+    }
+  }
 
   const navItems = getNavItemsByRole(user?.role);
   const currentItem =
@@ -308,8 +488,15 @@ export function AdminTopbar({
                 </div>
                 <button
                   type="button"
-                  onClick={onLogout}
+                  onClick={openChangePassword}
                   className="mt-3 w-full rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground transition hover:bg-surface-muted"
+                >
+                  Đổi mật khẩu
+                </button>
+                <button
+                  type="button"
+                  onClick={onLogout}
+                  className="mt-2 w-full rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground transition hover:bg-surface-muted"
                 >
                   Đăng xuất
                 </button>
@@ -325,6 +512,90 @@ export function AdminTopbar({
           </Link>
         )}
       </div>
+
+      {isChangePasswordOpen ? (
+        <AdminModalLayer>
+          <div className="w-full max-w-md rounded-xl border border-border bg-white p-5 shadow-sm">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-semibold text-foreground">
+                  Đổi mật khẩu
+                </h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Vì lý do bảo mật, hệ thống sẽ thu hồi các phiên đăng nhập khác sau khi đổi.
+                </p>
+              </div>
+              <ModalCloseButton
+                onClick={closeChangePassword}
+                disabled={isSubmittingPassword}
+              />
+            </div>
+
+            <form onSubmit={submitChangePassword} className="mt-4 space-y-3">
+              <PasswordRevealField
+                label="Mật khẩu hiện tại"
+                value={oldPassword}
+                onChange={setOldPassword}
+                visible={showOldPassword}
+                onToggleVisible={() => setShowOldPassword((v) => !v)}
+                disabled={isSubmittingPassword}
+                autoComplete="current-password"
+              />
+              <PasswordRevealField
+                label="Mật khẩu mới"
+                value={newPassword}
+                onChange={setNewPassword}
+                visible={showNewPassword}
+                onToggleVisible={() => setShowNewPassword((v) => !v)}
+                disabled={isSubmittingPassword}
+                autoComplete="new-password"
+                hint="Tối thiểu 6 ký tự, khác mật khẩu hiện tại."
+              />
+              <PasswordRevealField
+                label="Xác nhận mật khẩu mới"
+                value={confirmPassword}
+                onChange={setConfirmPassword}
+                visible={showConfirmPassword}
+                onToggleVisible={() => setShowConfirmPassword((v) => !v)}
+                disabled={isSubmittingPassword}
+                autoComplete="new-password"
+              />
+
+              {passwordError ? (
+                <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                  {passwordError}
+                </p>
+              ) : null}
+
+              <div className="mt-4 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={closeChangePassword}
+                  disabled={isSubmittingPassword}
+                  className="rounded-lg border border-border bg-white px-3 py-2 text-sm font-medium text-foreground transition hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingPassword}
+                  className="rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isSubmittingPassword ? "Đang lưu..." : "Đổi mật khẩu"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </AdminModalLayer>
+      ) : null}
+
+      <Toast
+        open={!!passwordToast}
+        title={passwordToast?.title ?? ""}
+        message={passwordToast?.message ?? ""}
+        variant={passwordToast?.variant ?? "success"}
+        onClose={() => setPasswordToast(null)}
+      />
     </header>
   );
 }

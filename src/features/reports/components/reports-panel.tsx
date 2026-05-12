@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { AdminModalLayer } from "@/components/ui/admin-modal-layer";
 import { ModalCloseButton } from "@/components/ui/modal-close-button";
 import { Pagination } from "@/components/ui/pagination";
 import {
@@ -1532,7 +1533,7 @@ export function ReportsPanel() {
       </div>
 
       {isFilterOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4">
+        <AdminModalLayer>
           <div className="w-full max-w-md rounded-xl border border-border bg-white p-5 shadow-sm">
             <h3 className="text-lg font-semibold text-foreground">Bộ lọc báo cáo</h3>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -1629,7 +1630,7 @@ export function ReportsPanel() {
               </button>
             </div>
           </div>
-        </div>
+        </AdminModalLayer>
       ) : null}
 
       <div className="data-card overflow-hidden">
@@ -1789,7 +1790,7 @@ export function ReportsPanel() {
       </div>
 
       {selectedCase ? (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/30 px-4">
+        <AdminModalLayer zIndex={40}>
           <div className="max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-xl border border-border bg-white shadow-sm">
             <div className="flex items-start justify-between gap-4 border-b border-border px-5 py-4">
               <div>
@@ -2288,11 +2289,11 @@ export function ReportsPanel() {
               </div>
             </div>
           </div>
-        </div>
+        </AdminModalLayer>
       ) : null}
 
       {confirmAction ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4">
+        <AdminModalLayer>
           <div className="w-full max-w-md rounded-xl border border-border bg-white p-5 shadow-sm">
             <h3 className="text-lg font-semibold text-foreground">{confirmAction.title}</h3>
             <p className="mt-2 text-sm text-muted-foreground">
@@ -2376,11 +2377,11 @@ export function ReportsPanel() {
               </button>
             </div>
           </div>
-        </div>
+        </AdminModalLayer>
       ) : null}
 
       {lockAuthorTarget ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4">
+        <AdminModalLayer>
           <div className="w-full max-w-lg rounded-xl border border-border bg-white p-5 shadow-sm">
             <h3 className="text-lg font-semibold text-foreground">
               Khóa tài khoản người đăng
@@ -2493,7 +2494,7 @@ export function ReportsPanel() {
               </button>
             </div>
           </div>
-        </div>
+        </AdminModalLayer>
       ) : null}
     </section>
   );

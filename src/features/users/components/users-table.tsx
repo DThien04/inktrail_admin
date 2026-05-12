@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { AdminModalLayer } from "@/components/ui/admin-modal-layer";
 import { Pagination } from "@/components/ui/pagination";
 import { Toast } from "@/components/ui/toast";
 import { getStoredUser } from "@/features/auth/storage";
@@ -503,7 +504,7 @@ export function UsersTable() {
       </div>
 
       {isFilterOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4">
+        <AdminModalLayer>
           <div className="w-full max-w-md rounded-xl border border-border bg-white p-5 shadow-sm">
             <h3 className="text-lg font-semibold text-foreground">Bộ lọc người dùng</h3>
             <div className="mt-4 space-y-4">
@@ -559,11 +560,11 @@ export function UsersTable() {
               </button>
             </div>
           </div>
-        </div>
+        </AdminModalLayer>
       ) : null}
 
       {lockTarget ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4">
+        <AdminModalLayer>
           <div className="w-full max-w-md rounded-xl border border-border bg-white p-5 shadow-sm">
             <h3 className="text-lg font-semibold text-foreground">Khóa tài khoản</h3>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -612,11 +613,11 @@ export function UsersTable() {
               </button>
             </div>
           </div>
-        </div>
+        </AdminModalLayer>
       ) : null}
 
       {unlockTarget ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4">
+        <AdminModalLayer>
           <div className="w-full max-w-md rounded-xl border border-border bg-white p-5 shadow-sm">
             <h3 className="text-lg font-semibold text-foreground">Mở khóa tài khoản</h3>
             <p className="mt-2 text-sm text-muted-foreground">
@@ -649,7 +650,7 @@ export function UsersTable() {
               </button>
             </div>
           </div>
-        </div>
+        </AdminModalLayer>
       ) : null}
     </section>
   );

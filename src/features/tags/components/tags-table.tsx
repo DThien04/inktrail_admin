@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { AdminModalLayer } from "@/components/ui/admin-modal-layer";
 import { ModalCloseButton } from "@/components/ui/modal-close-button";
 import { Pagination } from "@/components/ui/pagination";
 import {
@@ -13,8 +14,101 @@ import {
   setAdminTagsGroupBulk,
   updateAdminTag,
   updateAdminTagGroup,
+  type AdminTagGroupSortKey,
+  type AdminTagGroupSortOrder,
+  type AdminTagGroupTagFilter,
+  type AdminTagSortKey,
+  type AdminTagSortOrder,
 } from "@/features/tags/services/tags-service";
 import type { AdminTagGroupItem, AdminTagItem } from "@/features/tags/types";
+
+function TagHeaderSortButton({
+  label,
+  sortKey,
+  activeSortKey,
+  direction,
+  onSort,
+}: {
+  label: string;
+  sortKey: AdminTagSortKey;
+  activeSortKey: AdminTagSortKey;
+  direction: AdminTagSortOrder;
+  onSort: (next: AdminTagSortKey) => void;
+}) {
+  const isActive = sortKey === activeSortKey;
+  return (
+    <button
+      type="button"
+      onClick={() => onSort(sortKey)}
+      className={`inline-flex w-fit items-center gap-1.5 text-left transition hover:text-accent ${isActive ? "text-foreground" : ""}`}
+    >
+      <span>{label}</span>
+      <span
+        className="flex h-4 w-3 flex-col items-center justify-center gap-0.5"
+        aria-hidden
+      >
+        <span
+          className={`h-0 w-0 border-x-[4px] border-b-[5px] border-x-transparent ${
+            isActive && direction === "asc"
+              ? "border-b-foreground"
+              : "border-b-muted-foreground/45"
+          }`}
+        />
+        <span
+          className={`h-0 w-0 border-x-[4px] border-t-[5px] border-x-transparent ${
+            isActive && direction === "desc"
+              ? "border-t-foreground"
+              : "border-t-muted-foreground/45"
+          }`}
+        />
+      </span>
+    </button>
+  );
+}
+
+function TagGroupHeaderSortButton({
+  label,
+  sortKey,
+  activeSortKey,
+  direction,
+  onSort,
+}: {
+  label: string;
+  sortKey: AdminTagGroupSortKey;
+  activeSortKey: AdminTagGroupSortKey;
+  direction: AdminTagGroupSortOrder;
+  onSort: (next: AdminTagGroupSortKey) => void;
+}) {
+  const isActive = sortKey === activeSortKey;
+  return (
+    <button
+      type="button"
+      onClick={() => onSort(sortKey)}
+      className={`inline-flex w-fit items-center gap-1.5 text-left transition hover:text-accent ${isActive ? "text-foreground" : ""}`}
+    >
+      <span>{label}</span>
+      <span
+        className="flex h-4 w-3 flex-col items-center justify-center gap-0.5"
+        aria-hidden
+      >
+        <span
+          className={`h-0 w-0 border-x-[4px] border-b-[5px] border-x-transparent ${
+            isActive && direction === "asc"
+              ? "border-b-foreground"
+              : "border-b-muted-foreground/45"
+          }`}
+        />
+        <span
+          className={`h-0 w-0 border-x-[4px] border-t-[5px] border-x-transparent ${
+            isActive && direction === "desc"
+              ? "border-t-foreground"
+              : "border-t-muted-foreground/45"
+          }`}
+        />
+      </span>
+    </button>
+  );
+}
 
 function formatDate(value: string) {
   const date = new Date(value);
@@ -45,6 +139,8 @@ export function TagsTable() {
   const [groupOptions, setGroupOptions] = useState<AdminTagGroupItem[]>([]);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+  const [sortKey, setSortKey] = useState<AdminTagSortKey>("updated_at");
+  const [sortDirection, setSortDirection] = useState<AdminTagSortOrder>("desc");
 
   const [modalMode, setModalMode] = useState<ModalMode>(null);
   const [activeTag, setActiveTag] = useState<AdminTagItem | null>(null);
@@ -63,6 +159,25 @@ export function TagsTable() {
   const [groupActionTarget, setGroupActionTarget] = useState<AdminTagGroupItem | null>(null);
   const [editGroupName, setEditGroupName] = useState("");
   const [editGroupDesc, setEditGroupDesc] = useState("");
+
+  const [groupTableItems, setGroupTableItems] = useState<AdminTagGroupItem[]>([]);
+  const [groupTableTotal, setGroupTableTotal] = useState(0);
+  const [groupTablePage, setGroupTablePage] = useState(1);
+  const [groupTablePageSize, setGroupTablePageSize] = useState(20);
+  const [groupTableDraftKeyword, setGroupTableDraftKeyword] = useState("");
+  const [groupTableKeyword, setGroupTableKeyword] = useState("");
+  const [groupTableTagFilter, setGroupTableTagFilter] =
+    useState<AdminTagGroupTagFilter>("all");
+  const [groupTableSortKey, setGroupTableSortKey] =
+    useState<AdminTagGroupSortKey>("updated_at");
+  const [groupTableSortDir, setGroupTableSortDir] =
+    useState<AdminTagGroupSortOrder>("desc");
+  const [groupTableLoading, setGroupTableLoading] = useState(false);
+  const [groupTableReloadToken, setGroupTableReloadToken] = useState(0);
+
+  const bumpGroupTable = useCallback(() => {
+    setGroupTableReloadToken((t) => t + 1);
+  }, []);
 
   const [manageInGroupDraftKw, setManageInGroupDraftKw] = useState("");
   const [manageInGroupKw, setManageInGroupKw] = useState("");
@@ -122,6 +237,8 @@ export function TagsTable() {
         groupId: filterGroupId || undefined,
         page,
         pageSize,
+        sortBy: sortKey,
+        sortOrder: sortDirection,
       });
       setItems(response.items);
       setTotalItems(response.total);
@@ -135,7 +252,17 @@ export function TagsTable() {
       setIsLoading(false);
       setIsReloading(false);
     }
-  }, [keyword, filterGroupId, page, pageSize]);
+  }, [keyword, filterGroupId, page, pageSize, sortKey, sortDirection]);
+
+  function toggleSort(nextKey: AdminTagSortKey) {
+    if (sortKey === nextKey) {
+      setSortDirection((current) => (current === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(nextKey);
+      setSortDirection("asc");
+    }
+    setPage(1);
+  }
 
   useEffect(() => {
     void loadTags();
@@ -153,6 +280,72 @@ export function TagsTable() {
 
     return () => window.clearTimeout(timer);
   }, [draftKeyword]);
+
+  useEffect(() => {
+    if (modalMode !== "groups" || groupSubModal) return;
+    const timer = window.setTimeout(() => {
+      setGroupTableKeyword(groupTableDraftKeyword.trim());
+      setGroupTablePage(1);
+    }, 380);
+    return () => window.clearTimeout(timer);
+  }, [modalMode, groupSubModal, groupTableDraftKeyword]);
+
+  useEffect(() => {
+    if (modalMode !== "groups" || groupSubModal) return;
+    let cancelled = false;
+    setGroupTableLoading(true);
+    void (async () => {
+      try {
+        const res = await getAdminTagGroups({
+          keyword: groupTableKeyword || undefined,
+          page: groupTablePage,
+          pageSize: groupTablePageSize,
+          sortBy: groupTableSortKey,
+          sortOrder: groupTableSortDir,
+          tagFilter: groupTableTagFilter,
+        });
+        if (cancelled) return;
+        setGroupTableItems(res.items);
+        setGroupTableTotal(res.total);
+      } catch {
+        if (!cancelled) {
+          setGroupTableItems([]);
+          setGroupTableTotal(0);
+        }
+      } finally {
+        if (!cancelled) setGroupTableLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    modalMode,
+    groupSubModal,
+    groupTablePage,
+    groupTablePageSize,
+    groupTableKeyword,
+    groupTableTagFilter,
+    groupTableSortKey,
+    groupTableSortDir,
+    groupTableReloadToken,
+  ]);
+
+  useEffect(() => {
+    if (modalMode !== "groups" || groupSubModal) return;
+    const maxPage = Math.max(1, Math.ceil(groupTableTotal / groupTablePageSize) || 1);
+    if (groupTablePage > maxPage) setGroupTablePage(maxPage);
+  }, [modalMode, groupSubModal, groupTableTotal, groupTablePageSize, groupTablePage]);
+
+  function toggleGroupTableSort(nextKey: AdminTagGroupSortKey) {
+    if (groupTableSortKey === nextKey) {
+      setGroupTableSortDir((current) => (current === "asc" ? "desc" : "asc"));
+    } else {
+      setGroupTableSortKey(nextKey);
+      setGroupTableSortDir("asc");
+    }
+    setGroupTablePage(1);
+  }
 
   function openRename(tag: AdminTagItem) {
     setActiveTag(tag);
@@ -172,6 +365,15 @@ export function TagsTable() {
     setEditGroupName("");
     setEditGroupDesc("");
     resetManageTagsModalState();
+    setGroupTableDraftKeyword("");
+    setGroupTableKeyword("");
+    setGroupTablePage(1);
+    setGroupTablePageSize(20);
+    setGroupTableTagFilter("all");
+    setGroupTableSortKey("updated_at");
+    setGroupTableSortDir("desc");
+    setGroupTableItems([]);
+    setGroupTableTotal(0);
     setModalMode("groups");
     void refreshGroupOptions();
   }
@@ -549,6 +751,7 @@ export function TagsTable() {
       await createAdminTagGroup({ name, description: newGroupDesc.trim() });
       closeGroupSubModal();
       await refreshGroupOptions();
+      bumpGroupTable();
     } catch (error) {
       setModalError(
         error instanceof Error && error.message ? error.message : "Không thể tạo nhóm.",
@@ -575,6 +778,7 @@ export function TagsTable() {
       });
       closeGroupSubModal();
       await refreshGroupOptions();
+      bumpGroupTable();
     } catch (error) {
       setModalError(
         error instanceof Error && error.message ? error.message : "Không thể cập nhật nhóm.",
@@ -593,6 +797,7 @@ export function TagsTable() {
       if (filterGroupId === groupActionTarget.id) setFilterGroupId("");
       closeGroupSubModal();
       await refreshGroupOptions();
+      bumpGroupTable();
       void loadTags({ reloading: true });
     } catch (error) {
       setModalError(
@@ -653,6 +858,7 @@ export function TagsTable() {
       });
       setManageUngroupedSelected([]);
       await refreshGroupOptions();
+      bumpGroupTable();
       void loadTags({ reloading: true });
       await reloadManageTagLists(groupActionTarget.id);
     } catch (error) {
@@ -675,6 +881,7 @@ export function TagsTable() {
       });
       setManageInGroupSelected([]);
       await refreshGroupOptions();
+      bumpGroupTable();
       void loadTags({ reloading: true });
       await reloadManageTagLists(groupActionTarget.id);
     } catch (error) {
@@ -708,6 +915,7 @@ export function TagsTable() {
       }
       setManageInGroupSelected([]);
       await refreshGroupOptions();
+      bumpGroupTable();
       void loadTags({ reloading: true });
       await reloadManageTagLists(groupActionTarget.id);
     } catch (error) {
@@ -834,7 +1042,15 @@ export function TagsTable() {
                     aria-label="Chọn tất cả tag trong trang"
                   />
                 </th>
-                <th className="px-4 py-3 font-semibold">Tag</th>
+                <th className="px-4 py-3 font-semibold">
+                  <TagHeaderSortButton
+                    label="Tag"
+                    sortKey="name"
+                    activeSortKey={sortKey}
+                    direction={sortDirection}
+                    onSort={toggleSort}
+                  />
+                </th>
                 <th
                   className="px-4 py-3 font-semibold"
                   title="Mỗi tag chỉ thuộc tối đa một nhóm."
@@ -842,8 +1058,24 @@ export function TagsTable() {
                   Nhóm
                 </th>
                 <th className="px-4 py-3 font-semibold">Mô tả</th>
-                <th className="px-4 py-3 font-semibold">Số truyện</th>
-                <th className="px-4 py-3 font-semibold">Cập nhật</th>
+                <th className="px-4 py-3 font-semibold">
+                  <TagHeaderSortButton
+                    label="Số truyện"
+                    sortKey="usage_count"
+                    activeSortKey={sortKey}
+                    direction={sortDirection}
+                    onSort={toggleSort}
+                  />
+                </th>
+                <th className="px-4 py-3 font-semibold">
+                  <TagHeaderSortButton
+                    label="Cập nhật"
+                    sortKey="updated_at"
+                    activeSortKey={sortKey}
+                    direction={sortDirection}
+                    onSort={toggleSort}
+                  />
+                </th>
                 <th className="px-4 py-3 font-semibold" />
               </tr>
             </thead>
@@ -945,7 +1177,7 @@ export function TagsTable() {
       </div>
 
       {modalMode ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4">
+        <AdminModalLayer>
           <div
             className={`w-full rounded-xl border border-border bg-white shadow-sm ${
               modalMode === "groups" && groupSubModal === "manage_tags"
@@ -1070,82 +1302,194 @@ export function TagsTable() {
 
             {modalMode === "groups" && !groupSubModal ? (
               <div className="mt-4 space-y-4">
-                <div className="flex justify-end">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                  <div className="flex w-full flex-1 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+                    <div className="relative min-w-[12rem] flex-1 sm:max-w-md">
+                      <input
+                        type="search"
+                        value={groupTableDraftKeyword}
+                        onChange={(event) => setGroupTableDraftKeyword(event.target.value)}
+                        placeholder="Tìm nhóm theo tên hoặc mô tả..."
+                        className="w-full rounded-xl border border-border bg-white px-3 py-2 pr-9 text-sm text-foreground shadow-sm outline-none transition placeholder:text-muted-foreground focus:border-accent"
+                        aria-label="Tìm nhóm tag"
+                      />
+                      {groupTableDraftKeyword.trim().length > 0 ? (
+                        <button
+                          type="button"
+                          onClick={() => setGroupTableDraftKeyword("")}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg px-2 py-0.5 text-xs font-semibold text-muted-foreground transition hover:bg-surface-muted hover:text-foreground"
+                          aria-label="Xóa tìm kiếm"
+                        >
+                          ×
+                        </button>
+                      ) : null}
+                    </div>
+                    <select
+                      value={groupTableTagFilter}
+                      onChange={(event) => {
+                        setGroupTableTagFilter(event.target.value as AdminTagGroupTagFilter);
+                        setGroupTablePage(1);
+                      }}
+                      className="h-10 min-w-[11rem] rounded-xl border border-border bg-white px-3 text-sm text-foreground shadow-sm outline-none focus:border-accent sm:w-auto"
+                      aria-label="Lọc nhóm theo số tag"
+                    >
+                      <option value="all">Tất cả nhóm</option>
+                      <option value="empty">Chưa có tag</option>
+                      <option value="non_empty">Có ít nhất 1 tag</option>
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => bumpGroupTable()}
+                      disabled={groupTableLoading}
+                      aria-label="Tải lại danh sách nhóm"
+                      title="Tải lại"
+                      className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-white text-foreground shadow-sm transition hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        className={`h-5 w-5 ${groupTableLoading ? "animate-[spin_0.55s_linear_infinite]" : ""}`}
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.9"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden
+                      >
+                        <path d="M21 2v6h-6" />
+                        <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
+                        <path d="M3 22v-6h6" />
+                        <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
+                      </svg>
+                    </button>
+                  </div>
                   <button
                     type="button"
                     disabled={isSaving}
                     onClick={openGroupCreateModal}
-                    className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition hover:bg-accent-strong disabled:opacity-60"
+                    className="h-10 shrink-0 rounded-lg bg-accent px-4 text-sm font-medium text-white transition hover:bg-accent-strong disabled:opacity-60"
                   >
                     Thêm nhóm
                   </button>
                 </div>
-                <div className="overflow-x-auto rounded-lg border border-border">
-                  <table className="min-w-full text-left text-sm">
-                    <thead className="bg-surface-muted text-muted-foreground">
-                      <tr>
-                        <th className="px-3 py-2 font-semibold">Tên nhóm</th>
-                        <th className="px-3 py-2 font-semibold">Số tag</th>
-                        <th className="px-3 py-2 font-semibold text-right">Thao tác</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {groupOptions.length === 0 ? (
+
+                <div className="overflow-hidden rounded-lg border border-border">
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full text-left text-sm">
+                      <thead className="bg-surface-muted text-muted-foreground">
                         <tr>
-                          <td colSpan={3} className="px-3 py-6 text-center text-muted-foreground">
-                            Chưa có nhóm. Nhấn Thêm nhóm để tạo.
-                          </td>
+                          <th className="px-3 py-2 font-semibold">
+                            <TagGroupHeaderSortButton
+                              label="Tên nhóm"
+                              sortKey="name"
+                              activeSortKey={groupTableSortKey}
+                              direction={groupTableSortDir}
+                              onSort={toggleGroupTableSort}
+                            />
+                          </th>
+                          <th className="px-3 py-2 font-semibold">
+                            <TagGroupHeaderSortButton
+                              label="Số tag"
+                              sortKey="tag_count"
+                              activeSortKey={groupTableSortKey}
+                              direction={groupTableSortDir}
+                              onSort={toggleGroupTableSort}
+                            />
+                          </th>
+                          <th className="px-3 py-2 font-semibold">
+                            <TagGroupHeaderSortButton
+                              label="Cập nhật"
+                              sortKey="updated_at"
+                              activeSortKey={groupTableSortKey}
+                              direction={groupTableSortDir}
+                              onSort={toggleGroupTableSort}
+                            />
+                          </th>
+                          <th className="px-3 py-2 text-right font-semibold">Thao tác</th>
                         </tr>
-                      ) : (
-                        groupOptions.map((g) => (
-                          <tr key={g.id} className="border-t border-border/70">
-                            <td className="px-3 py-2 align-top">
-                              <div>
-                                <p className="font-medium text-foreground">{g.name}</p>
-                                {g.description ? (
-                                  <p className="mt-0.5 text-xs text-muted-foreground">{g.description}</p>
-                                ) : null}
-                              </div>
-                            </td>
-                            <td className="px-3 py-2 text-foreground">{g.tagCount}</td>
-                            <td className="px-3 py-2 text-right">
-                              <div className="flex flex-wrap justify-end gap-2">
-                                <button
-                                  type="button"
-                                  disabled={isSaving}
-                                  onClick={() => openGroupManageTagsModal(g)}
-                                  className="rounded-lg border border-border bg-white px-2.5 py-1 text-xs font-medium disabled:opacity-60"
-                                >
-                                  Quản lý tag
-                                </button>
-                                <button
-                                  type="button"
-                                  disabled={isSaving}
-                                  onClick={() => openGroupEditModal(g)}
-                                  className="rounded-lg border border-border bg-white px-2.5 py-1 text-xs font-medium disabled:opacity-60"
-                                >
-                                  Sửa
-                                </button>
-                                <button
-                                  type="button"
-                                  disabled={isSaving || g.tagCount > 0}
-                                  onClick={() => openGroupDeleteModal(g)}
-                                  className="rounded-lg border border-red-200 bg-white px-2.5 py-1 text-xs font-medium text-red-700 disabled:opacity-60"
-                                  title={
-                                    g.tagCount > 0
-                                      ? "Gỡ hoặc gán tag sang nhóm khác trước khi xóa nhóm"
-                                      : "Xóa nhóm"
-                                  }
-                                >
-                                  Xóa
-                                </button>
-                              </div>
+                      </thead>
+                      <tbody>
+                        {groupTableLoading ? (
+                          <tr>
+                            <td colSpan={4} className="px-3 py-8 text-center text-muted-foreground">
+                              Đang tải danh sách nhóm...
                             </td>
                           </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
+                        ) : groupTableTotal === 0 ? (
+                          <tr>
+                            <td colSpan={4} className="px-3 py-8 text-center text-muted-foreground">
+                              {groupTableKeyword || groupTableTagFilter !== "all"
+                                ? "Không có nhóm phù hợp bộ lọc hoặc từ khóa."
+                                : "Chưa có nhóm. Nhấn Thêm nhóm để tạo."}
+                            </td>
+                          </tr>
+                        ) : (
+                          groupTableItems.map((g) => (
+                            <tr key={g.id} className="border-t border-border/70">
+                              <td className="px-3 py-2 align-top">
+                                <div>
+                                  <p className="font-medium text-foreground">{g.name}</p>
+                                  {g.description ? (
+                                    <p className="mt-0.5 text-xs text-muted-foreground">
+                                      {g.description}
+                                    </p>
+                                  ) : null}
+                                </div>
+                              </td>
+                              <td className="px-3 py-2 text-foreground tabular-nums">{g.tagCount}</td>
+                              <td className="px-3 py-2 text-muted-foreground">
+                                {formatDate(g.updatedAt)}
+                              </td>
+                              <td className="px-3 py-2 text-right">
+                                <div className="flex flex-wrap justify-end gap-2">
+                                  <button
+                                    type="button"
+                                    disabled={isSaving}
+                                    onClick={() => openGroupManageTagsModal(g)}
+                                    className="rounded-lg border border-border bg-white px-2.5 py-1 text-xs font-medium disabled:opacity-60"
+                                  >
+                                    Quản lý tag
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={isSaving}
+                                    onClick={() => openGroupEditModal(g)}
+                                    className="rounded-lg border border-border bg-white px-2.5 py-1 text-xs font-medium disabled:opacity-60"
+                                  >
+                                    Sửa
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={isSaving || g.tagCount > 0}
+                                    onClick={() => openGroupDeleteModal(g)}
+                                    className="rounded-lg border border-red-200 bg-white px-2.5 py-1 text-xs font-medium text-red-700 disabled:opacity-60"
+                                    title={
+                                      g.tagCount > 0
+                                        ? "Gỡ hoặc gán tag sang nhóm khác trước khi xóa nhóm"
+                                        : "Xóa nhóm"
+                                    }
+                                  >
+                                    Xóa
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                  <Pagination
+                    page={groupTablePage}
+                    pageSize={groupTablePageSize}
+                    totalItems={groupTableTotal}
+                    pageSizeOptions={[10, 20, 50, 100]}
+                    onPageChange={setGroupTablePage}
+                    onPageSizeChange={(size) => {
+                      setGroupTablePageSize(size);
+                      setGroupTablePage(1);
+                    }}
+                    itemLabel="nhóm"
+                  />
                 </div>
               </div>
             ) : null}
@@ -1663,7 +2007,7 @@ export function TagsTable() {
             </div>
             ) : null}
           </div>
-        </div>
+        </AdminModalLayer>
       ) : null}
     </section>
   );
